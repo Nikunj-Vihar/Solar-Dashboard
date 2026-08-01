@@ -117,6 +117,26 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Chart colors — validated against this theme's actual card surfaces
+   (#ffffff light / #171717 dark) via the dataviz skill's palette
+   validator (CVD-safe adjacent pairs, contrast checked). */
+:root {
+  --viz-series-1: #2a78d6; /* blue — primary series (trend actual, bar default) */
+  --viz-band: #2a78d6; /* same hue as series-1, used as a low-opacity wash for the baseline band */
+  --viz-status-good: #0ca30c;
+  --viz-status-warning: #fab219;
+  --viz-status-serious: #ec835a;
+  --viz-status-critical: #d03b3b;
+}
+.dark {
+  --viz-series-1: #3987e5;
+  --viz-band: #3987e5;
+  --viz-status-good: #0ca30c;
+  --viz-status-warning: #fab219;
+  --viz-status-serious: #ec835a;
+  --viz-status-critical: #d03b3b;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
