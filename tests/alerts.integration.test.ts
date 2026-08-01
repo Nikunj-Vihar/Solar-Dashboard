@@ -1,0 +1,251 @@
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+// Verifies spec §10.3 against the real Postgres functions (refresh_alerts,
+// check_daily_baseline_deviation) in supabase/migrations/0005_alerts_and_cron.sql —
+// these can't be unit tested since the logic lives in the database, not in TS.
+
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const hasCredentials = Boolean(url && serviceRoleKey);
+const describeIfLive = hasCredentials ? describe : describe.skip;
+
+function ymd(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+function daysAgo(n: number): Date {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - n);
+  return d;
+}
+
+describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation)", () => {
+  let admin: SupabaseClient;
+  let userId: string;
+  let siteId: string;
+  let inverterIds: string[];
+
+  /** Creates a fresh confirmed test user + 4-inverter site, with a flat baseline. */
+  async function seedSite(label: string) {
+    const { data: user, error: userErr } = await admin.auth.admin.createUser({
+      email: `alerts-test-${label}-${Date.now()}@example.com`,
+      password: "test-password-12345",
+      email_confirm: true,
+    });
+    if (userErr) throw userErr;
+    const newUserId = user.user.id;
+
+    const { data: site, error: siteErr } = await admin
+      .from("sites")
+      .insert({
+        owner_id: newUserId,
+        name: `${label} Site`,
+        latitude: 18.52,
+        longitude: 73.86,
+        timezone: "Asia/Kolkata",
+      })
+      .select()
+      .single();
+    if (siteErr) throw siteErr;
+
+    const { data: inverters, error: invErr } = await admin
+      .from("inverters")
+      .insert(
+        Array.from({ length: 4 }, (_, i) => ({
+          site_id: site.id,
+          name: `Inverter ${i + 1}`,
+          rated_capacity_kw: 5.5,
+          dc_capacity_kwp: 6.6,
+        })),
+      )
+      .select();
+    if (invErr) throw invErr;
+
+    const { error: baselineErr } = await admin.from("expected_baseline_monthly").insert(
+      Array.from({ length: 12 }, (_, i) => ({
+        site_id: site.id,
+        month: i + 1,
+        avg_daily_irradiance_kwh_per_m2: 5,
+        expected_daily_kwh_low: 85,
+        expected_daily_kwh_mid: 100,
+        expected_daily_kwh_high: 115,
+      })),
+    );
+    if (baselineErr) throw baselineErr;
+
+    return { userId: newUserId, siteId: site.id as string, inverterIds: inverters.map((i) => i.id as string) };
+  }
+
+  async function insertReadingsInChunks(rows: Record<string, unknown>[]) {
+    for (let i = 0; i < rows.length; i += 100) {
+      const { error } = await admin.from("daily_readings").insert(rows.slice(i, i + 100));
+      if (error) throw error;
+    }
+  }
+
+  beforeAll(async () => {
+    admin = createClient(url!, serviceRoleKey!);
+    const seeded = await seedSite("underperf");
+    userId = seeded.userId;
+    siteId = seeded.siteId;
+    inverterIds = seeded.inverterIds;
+  });
+
+  afterAll(async () => {
+    await admin.auth.admin.deleteUser(userId);
+  });
+
+  it("flags the one inverter deliberately logged low, and no one else", async () => {
+    const rows = [];
+    // 37 days of history: inverters 0-2 steady at 25 kWh/day throughout.
+    // Inverter 3 also steady at 25 for the first 30 days (baseline window),
+    // then drops to 10 kWh/day (60% down) for the most recent 7 days.
+    for (let d = 36; d >= 0; d--) {
+      const date = ymd(daysAgo(d));
+      for (let i = 0; i < 4; i++) {
+        const isDroppedInverter = i === 3 && d <= 6;
+        rows.push({
+          inverter_id: inverterIds[i],
+          site_id: siteId,
+          reading_date: date,
+          daily_kwh: isDroppedInverter ? 10 : 25,
+          cumulative_mwh: 10 + (36 - d) * 0.025,
+          entered_by: userId,
+        });
+      }
+    }
+    await insertReadingsInChunks(rows);
+
+    const { data: alerts, error } = await admin
+      .from("alerts")
+      .select("inverter_id, alert_type, severity, message")
+      .eq("site_id", siteId)
+      .eq("alert_type", "underperformance")
+      .eq("is_resolved", false);
+    if (error) throw error;
+
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].inverter_id).toBe(inverterIds[3]);
+    expect(alerts[0].message).toMatch(/Inverter 4/);
+    expect(alerts[0].message).toMatch(/below its 30-day average/);
+  });
+
+  it("does not flag normal day-to-day variation across all inverters", async () => {
+    const site2 = await seedSite("normal");
+
+    // +/-10% variation, well under the 20% underperformance threshold.
+    const rows = [];
+    for (let d = 36; d >= 0; d--) {
+      const date = ymd(daysAgo(d));
+      for (let i = 0; i < 4; i++) {
+        const variation = ((d * 7 + i * 3) % 10) - 5; // deterministic -5..+4
+        rows.push({
+          inverter_id: site2.inverterIds[i],
+          site_id: site2.siteId,
+          reading_date: date,
+          daily_kwh: 25 + variation,
+          cumulative_mwh: 10 + (36 - d) * 0.025,
+          entered_by: site2.userId,
+        });
+      }
+    }
+    await insertReadingsInChunks(rows);
+
+    const { data: alerts, error } = await admin
+      .from("alerts")
+      .select("id")
+      .eq("site_id", site2.siteId)
+      .eq("alert_type", "underperformance")
+      .eq("is_resolved", false);
+    if (error) throw error;
+
+    expect(alerts).toEqual([]);
+
+    await admin.auth.admin.deleteUser(site2.userId);
+  });
+
+  it("flags a missing reading after 2+ days of silence", async () => {
+    const site4 = await seedSite("missing");
+
+    // Last reading is 4 days ago for every inverter — nothing logged since.
+    const staleDate = ymd(daysAgo(4));
+    await insertReadingsInChunks(
+      site4.inverterIds.map((id) => ({
+        inverter_id: id,
+        site_id: site4.siteId,
+        reading_date: staleDate,
+        daily_kwh: 25,
+        cumulative_mwh: 10.025,
+        entered_by: site4.userId,
+      })),
+    );
+
+    // The insert trigger already ran refresh_alerts, but call it again
+    // explicitly too, matching the daily pg_cron sweep's job.
+    const { error: rpcErr } = await admin.rpc("refresh_alerts", { p_site_id: site4.siteId });
+    if (rpcErr) throw rpcErr;
+
+    const { data: alerts, error } = await admin
+      .from("alerts")
+      .select("inverter_id, message")
+      .eq("site_id", site4.siteId)
+      .eq("alert_type", "missing_reading")
+      .eq("is_resolved", false);
+    if (error) throw error;
+
+    expect(alerts.length).toBe(4);
+    expect(alerts[0].message).toMatch(/No reading logged/);
+
+    await admin.auth.admin.deleteUser(site4.userId);
+  });
+
+  it("flags a site-wide baseline deviation and resolves it once corrected", async () => {
+    const site3 = await seedSite("baseline");
+    const date = ymd(daysAgo(0));
+
+    // Total = 4 * 10 = 40 kWh, vs expected 100 -> 60% below, past the 35% threshold.
+    await insertReadingsInChunks(
+      site3.inverterIds.map((id) => ({
+        inverter_id: id,
+        site_id: site3.siteId,
+        reading_date: date,
+        daily_kwh: 10,
+        cumulative_mwh: 10.01,
+        entered_by: site3.userId,
+      })),
+    );
+
+    const { data: deviationAlerts, error: devErr } = await admin
+      .from("alerts")
+      .select("id, message")
+      .eq("site_id", site3.siteId)
+      .eq("alert_type", "baseline_deviation")
+      .eq("is_resolved", false);
+    if (devErr) throw devErr;
+
+    expect(deviationAlerts).toHaveLength(1);
+    expect(deviationAlerts[0].message).toMatch(/below the expected baseline/);
+
+    // Correct it: update all 4 to a normal ~25 kWh/day (total 100, matching expected).
+    for (const id of site3.inverterIds) {
+      const { error: updErr } = await admin
+        .from("daily_readings")
+        .update({ daily_kwh: 25, cumulative_mwh: 10.025 })
+        .eq("inverter_id", id)
+        .eq("reading_date", date);
+      if (updErr) throw updErr;
+    }
+
+    const { data: resolvedCheck, error: resErr } = await admin
+      .from("alerts")
+      .select("id")
+      .eq("site_id", site3.siteId)
+      .eq("alert_type", "baseline_deviation")
+      .eq("is_resolved", false);
+    if (resErr) throw resErr;
+
+    expect(resolvedCheck).toEqual([]);
+
+    await admin.auth.admin.deleteUser(site3.userId);
+  });
+});
