@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MapPin, Loader2 } from "lucide-react";
@@ -49,7 +48,6 @@ const defaultValues: SetupFormValues = {
 };
 
 export function SetupWizard() {
-  const router = useRouter();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -111,7 +109,11 @@ export function SetupWizard() {
       return;
     }
     toast.success("Site set up successfully");
-    router.replace("/dashboard");
+    // Hard navigation, not router.replace(): this is a one-time, low-frequency
+    // transition, and a full page load sidesteps the client router cache
+    // potentially serving a pre-setup "no site yet" RSC payload for /dashboard
+    // and bouncing the user straight back to /setup.
+    window.location.href = "/dashboard";
   }
 
   return (

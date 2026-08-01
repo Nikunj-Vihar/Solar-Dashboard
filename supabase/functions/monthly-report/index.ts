@@ -54,7 +54,7 @@ Deno.serve(async (req: Request) => {
   );
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   const resend = resendApiKey ? new Resend(resendApiKey) : null;
-  const siteUrl = Deno.env.get("SITE_URL") ?? "https://solar-dashboard.vercel.app";
+  const siteUrl = Deno.env.get("SITE_URL") ?? "https://solar-dashboard-flax.vercel.app";
   const fromAddress = Deno.env.get("RESEND_FROM") ?? "Solar Dashboard <onboarding@resend.dev>";
 
   // Previous calendar month, in UTC — a day or two of ambiguity around the
