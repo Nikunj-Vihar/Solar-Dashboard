@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentSite } from "@/lib/data/site";
-import { getReadingsForDate } from "@/lib/data/readings";
+import { getReadingsForDate, getLoggedDatesForSite } from "@/lib/data/readings";
 import { todayInTimezone, addDays, isValidDateString } from "@/lib/date";
 import { LoggingForm } from "./LoggingForm";
 
@@ -23,9 +23,10 @@ export default async function LogPage({
   const date = params.date && isValidDateString(params.date) ? params.date : today;
   const previousDate = addDays(date, -1);
 
-  const [todayReadings, previousReadings] = await Promise.all([
+  const [todayReadings, previousReadings, loggedDates] = await Promise.all([
     getReadingsForDate(site.id, date),
     getReadingsForDate(site.id, previousDate),
+    getLoggedDatesForSite(site.id),
   ]);
 
   const inverters = site.inverters
@@ -49,5 +50,12 @@ export default async function LogPage({
       };
     });
 
-  return <LoggingForm date={date} today={today} inverters={inverters} />;
+  return (
+    <LoggingForm
+      date={date}
+      today={today}
+      inverters={inverters}
+      loggedDates={Array.from(loggedDates)}
+    />
+  );
 }

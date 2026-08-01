@@ -20,3 +20,13 @@ export async function getReadingsForDate(
     .eq("reading_date", date);
   return data ?? [];
 }
+
+/** Every date with at least one logged reading, for the log page's calendar dots. */
+export async function getLoggedDatesForSite(siteId: string): Promise<Set<string>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("daily_readings")
+    .select("reading_date")
+    .eq("site_id", siteId);
+  return new Set((data ?? []).map((r) => r.reading_date));
+}
