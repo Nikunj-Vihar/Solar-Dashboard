@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   Area,
   CartesianGrid,
@@ -67,6 +67,11 @@ export function TrendChart({
   today: string;
 }) {
   const [granularity, setGranularity] = useState<TrendGranularity>("day");
+  // Marking the switch as a transition lets the tab's own active state update
+  // immediately on click (feels instant) while the heavier chart re-render
+  // is treated as lower-priority -- isPending then drives a brief fade
+  // instead of a click-to-repaint freeze.
+  const [isPending, startTransition] = useTransition();
 
   const chartData = useMemo(() => {
     if (readings.length === 0) return [];
@@ -90,7 +95,12 @@ export function TrendChart({
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base">Generation trend</CardTitle>
-        <Tabs value={granularity} onValueChange={(v) => setGranularity(v as TrendGranularity)}>
+        <Tabs
+          value={granularity}
+          onValueChange={(v) =>
+            startTransition(() => setGranularity(v as TrendGranularity))
+          }
+        >
           <TabsList>
             <TabsTrigger value="day">Day</TabsTrigger>
             <TabsTrigger value="week">Week</TabsTrigger>
@@ -115,7 +125,9 @@ export function TrendChart({
                 Expected range
               </span>
             </div>
-            <div className="h-56">
+            <div
+              className={`h-56 transition-opacity duration-150 ${isPending ? "opacity-50" : "opacity-100"}`}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
                   <CartesianGrid vertical={false} stroke="var(--border)" />
