@@ -51,3 +51,27 @@ export const setupSchema = z.object({
 // output (numbers) — react-hook-form needs both shapes.
 export type SetupFormValues = z.input<typeof setupSchema>;
 export type SetupInput = z.output<typeof setupSchema>;
+
+export const readingEntrySchema = z.object({
+  inverterId: z.uuid(),
+  // Blank fields coerce to NaN rather than throwing, so we can surface a
+  // friendly "required" message instead of a raw zod coercion error.
+  dailyKwh: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.coerce.number({ error: "Required" }).min(0, "Can't be negative").max(1_000_000),
+  ),
+  cumulativeMwh: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.coerce.number({ error: "Required" }).min(0, "Can't be negative"),
+  ),
+  isReset: z.boolean().default(false),
+  confirmMismatch: z.boolean().default(false),
+});
+export type ReadingEntryInput = z.output<typeof readingEntrySchema>;
+
+export const dailyLogSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
+  readings: z.array(readingEntrySchema).length(NUM_INVERTERS),
+});
+export type DailyLogFormValues = z.input<typeof dailyLogSchema>;
+export type DailyLogInput = z.output<typeof dailyLogSchema>;
