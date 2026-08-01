@@ -36,8 +36,14 @@ function computeVsPercent(actual: number, expected: number): number | null {
 const MIN_DAYS_WITH_DATA = 20; // data-sufficiency guard, out of ~28-31 days in the month
 
 Deno.serve(async (req: Request) => {
+  // A dedicated secret rather than comparing against SUPABASE_SERVICE_ROLE_KEY
+  // directly — Supabase's own key format has changed across projects/rotations
+  // (legacy long JWT vs. newer short sb_secret_... keys), so pinning auth to
+  // a value we mint and control ourselves avoids depending on that. This
+  // function is deployed with --no-verify-jwt since callers (pg_cron, manual
+  // testing) authenticate with this secret instead of a Supabase-issued JWT.
   const authHeader = req.headers.get("Authorization") ?? "";
-  const expected = `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
+  const expected = `Bearer ${Deno.env.get("MONTHLY_REPORT_SECRET")}`;
   if (authHeader !== expected) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
