@@ -29,6 +29,7 @@ export type SiteWithInverters = {
   grid_emission_factor_kg_per_kwh: number;
   is_public: boolean;
   public_share_slug: string | null;
+  report_frequency: "daily" | "weekly" | "monthly" | "off";
   inverters: {
     id: string;
     name: string;
@@ -54,3 +55,27 @@ export const getCurrentSite = cache(async (): Promise<SiteWithInverters | null> 
 
   return data as SiteWithInverters | null;
 });
+
+export type PendingAccountAction = {
+  action: "wipe_data" | "delete_account";
+  expiresAt: string;
+};
+
+/** Read-only lookup for the /settings/confirm page -- does not consume the token. */
+export async function getPendingAccountAction(
+  token: string,
+): Promise<PendingAccountAction | null> {
+  const user = await getAuthedUser();
+  if (!user) return null;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("pending_account_actions")
+    .select("action, expires_at")
+    .eq("token", token)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!data) return null;
+  return { action: data.action as "wipe_data" | "delete_account", expiresAt: data.expires_at };
+}

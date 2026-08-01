@@ -77,3 +77,6 @@ export const dailyLogSchema = z.object({
 });
 export type DailyLogFormValues = z.input<typeof dailyLogSchema>;
 export type DailyLogInput = z.output<typeof dailyLogSchema>;
+
+export const reportFrequencySchema = z.enum(["daily", "weekly", "monthly", "off"]);
+export type ReportFrequency = z.infer<typeof reportFrequencySchema>;

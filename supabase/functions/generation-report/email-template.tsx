@@ -1,6 +1,6 @@
-// Deno-only file (deployed as part of the monthly-report Edge Function) —
+// Deno-only file (deployed as part of the generation-report Edge Function) —
 // uses npm: specifiers since this runs on Supabase's Deno edge runtime, not
-// Next.js/Node. See lib/calc/monthlyReport.ts for the shared KPI math this
+// Next.js/Node. See lib/calc/reportPeriod.ts for the shared period math this
 // template's data is computed with.
 import React from "npm:react@19";
 import {
@@ -18,11 +18,12 @@ import {
   Text,
 } from "npm:@react-email/components@0.0.31";
 
-export type MonthlyReportEmailProps = {
+export type GenerationReportEmailProps = {
   siteName: string;
-  monthLabel: string;
+  frequency: "daily" | "weekly" | "monthly";
+  periodLabel: string;
   totalKwh: number;
-  vsPreviousMonthPercent: number | null;
+  vsPreviousPeriodPercent: number | null;
   vsExpectedPercent: number | null;
   cufPercent: number;
   specificYieldKwhPerKwp: number;
@@ -33,18 +34,26 @@ export type MonthlyReportEmailProps = {
   dashboardUrl: string;
 };
 
+const FREQUENCY_COPY = {
+  daily: { reportName: "Daily generation report", vsPrevious: "vs. yesterday", flagsHeading: "Flags raised" },
+  weekly: { reportName: "Weekly generation report", vsPrevious: "vs. last week", flagsHeading: "Flags raised this week" },
+  monthly: { reportName: "Monthly generation report", vsPrevious: "vs. last month", flagsHeading: "Flags raised this month" },
+} as const;
+
 function pct(n: number | null): string {
   if (n === null) return "—";
   const sign = n > 0 ? "+" : "";
   return `${sign}${n.toFixed(1)}%`;
 }
 
-export function MonthlyReportEmail(props: MonthlyReportEmailProps) {
+export function GenerationReportEmail(props: GenerationReportEmailProps) {
+  const copy = FREQUENCY_COPY[props.frequency];
+
   return (
     <Html>
       <Head />
       <Preview>
-        {props.siteName}: {props.totalKwh.toLocaleString()} kWh generated in {props.monthLabel}
+        {props.siteName}: {props.totalKwh.toLocaleString()} kWh generated ({props.periodLabel})
       </Preview>
       <Body style={{ backgroundColor: "#f4f4f5", fontFamily: "sans-serif" }}>
         <Container
@@ -58,7 +67,7 @@ export function MonthlyReportEmail(props: MonthlyReportEmailProps) {
         >
           <Heading style={{ fontSize: "20px", margin: "0 0 4px" }}>{props.siteName}</Heading>
           <Text style={{ color: "#71717a", margin: "0 0 24px" }}>
-            Monthly generation report — {props.monthLabel}
+            {copy.reportName} — {props.periodLabel}
           </Text>
 
           <Section>
@@ -66,8 +75,8 @@ export function MonthlyReportEmail(props: MonthlyReportEmailProps) {
               {props.totalKwh.toLocaleString()} kWh
             </Text>
             <Text style={{ color: "#52525b", margin: "4px 0 0", fontSize: "14px" }}>
-              {pct(props.vsPreviousMonthPercent)} vs. last month · {pct(props.vsExpectedPercent)} vs.
-              expected
+              {pct(props.vsPreviousPeriodPercent)} {copy.vsPrevious} · {pct(props.vsExpectedPercent)}{" "}
+              vs. expected
             </Text>
           </Section>
 
@@ -137,7 +146,7 @@ export function MonthlyReportEmail(props: MonthlyReportEmailProps) {
               <Hr style={{ margin: "24px 0", borderColor: "#e4e4e7" }} />
               <Section>
                 <Heading as="h2" style={{ fontSize: "14px", margin: "0 0 8px" }}>
-                  Flags raised this month
+                  {copy.flagsHeading}
                 </Heading>
                 {props.alertMessages.map((msg, i) => (
                   <Text key={i} style={{ margin: "0 0 4px", fontSize: "13px", color: "#52525b" }}>

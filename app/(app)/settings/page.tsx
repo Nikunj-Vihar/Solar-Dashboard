@@ -3,6 +3,8 @@ import { Download } from "lucide-react";
 import { getCurrentSite } from "@/lib/data/site";
 import { PublicShareCard } from "./PublicShareCard";
 import { InvertersCard } from "./InvertersCard";
+import { ReportSettingsCard } from "./ReportSettingsCard";
+import { DangerZoneCard } from "./DangerZoneCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -30,6 +32,7 @@ export default async function SettingsPage() {
       <h1 className="text-2xl font-semibold">Settings</h1>
       <PublicShareCard initialIsPublic={site.is_public} initialSlug={site.public_share_slug} />
       <InvertersCard initialInverters={activeInverters} />
+      <ReportSettingsCard initialFrequency={site.report_frequency} />
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Export your data</CardTitle>
@@ -45,6 +48,7 @@ export default async function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
+      <DangerZoneCard siteName={site.name} />
     </div>
   );
 }
