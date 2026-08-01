@@ -53,11 +53,13 @@ export async function getDashboardData(site: SiteWithInverters): Promise<Dashboa
   const todayRows = rows.filter((r) => r.reading_date === today);
   const monthRows = rows.filter((r) => r.reading_date.startsWith(currentMonth));
 
-  const perInverterToday = site.inverters.map((inv) => ({
-    inverterId: inv.id,
-    name: inv.name,
-    kwh: todayRows.find((r) => r.inverter_id === inv.id)?.daily_kwh ?? 0,
-  }));
+  const perInverterToday = site.inverters
+    .filter((inv) => inv.is_active)
+    .map((inv) => ({
+      inverterId: inv.id,
+      name: inv.name,
+      kwh: todayRows.find((r) => r.inverter_id === inv.id)?.daily_kwh ?? 0,
+    }));
 
   return {
     today,

@@ -40,11 +40,13 @@ export const inverterSchema = z.object({
 });
 export type InverterInput = z.infer<typeof inverterSchema>;
 
-export const NUM_INVERTERS = 4;
+// Default starting point in the setup wizard -- users can add or remove
+// inverters from there (and later from Settings), so this isn't a limit.
+export const DEFAULT_NUM_INVERTERS = 4;
 
 export const setupSchema = z.object({
   site: siteSchema,
-  inverters: z.array(inverterSchema).length(NUM_INVERTERS),
+  inverters: z.array(inverterSchema).min(1, "Add at least one inverter"),
 });
 // `latitude`/`ratedCapacityKw`/etc use z.coerce.number(), so the raw form
 // values (strings, as HTML inputs produce) differ from the parsed/validated
@@ -71,7 +73,7 @@ export type ReadingEntryInput = z.output<typeof readingEntrySchema>;
 
 export const dailyLogSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
-  readings: z.array(readingEntrySchema).length(NUM_INVERTERS),
+  readings: z.array(readingEntrySchema).min(1),
 });
 export type DailyLogFormValues = z.input<typeof dailyLogSchema>;
 export type DailyLogInput = z.output<typeof dailyLogSchema>;

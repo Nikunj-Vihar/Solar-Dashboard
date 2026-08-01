@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   setupSchema,
   type SetupFormValues,
   type SetupInput,
-  NUM_INVERTERS,
+  DEFAULT_NUM_INVERTERS,
 } from "@/lib/validation/schemas";
 import { completeSetup } from "./actions";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ const defaultValues: SetupFormValues = {
     tariffRateInrPerKwh: undefined,
     isPublic: false,
   },
-  inverters: Array.from({ length: NUM_INVERTERS }, (_, i) => ({
+  inverters: Array.from({ length: DEFAULT_NUM_INVERTERS }, (_, i) => ({
     name: `Inverter ${i + 1}`,
     manufacturer: "",
     model: "",
@@ -47,6 +47,17 @@ const defaultValues: SetupFormValues = {
   })),
 };
 
+function blankInverter(n: number) {
+  return {
+    name: `Inverter ${n}`,
+    manufacturer: "",
+    model: "",
+    ratedCapacityKw: 0,
+    dcCapacityKwp: 0,
+    installDate: "",
+  };
+}
+
 export function SetupWizard() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -54,6 +65,7 @@ export function SetupWizard() {
 
   const {
     register,
+    control,
     handleSubmit,
     trigger,
     setValue,
@@ -64,17 +76,24 @@ export function SetupWizard() {
     defaultValues,
   });
 
+  const { fields: inverterFields, append, remove } = useFieldArray({
+    control,
+    name: "inverters",
+  });
+
   const isPublic = watch("site.isPublic");
 
   async function goNext() {
     const fields =
       step === 0
         ? ["site.name", "site.latitude", "site.longitude"]
-        : Array.from({ length: NUM_INVERTERS }, (_, i) => [
-            `inverters.${i}.name`,
-            `inverters.${i}.ratedCapacityKw`,
-            `inverters.${i}.dcCapacityKwp`,
-          ]).flat();
+        : inverterFields
+            .map((_, i) => [
+              `inverters.${i}.name`,
+              `inverters.${i}.ratedCapacityKw`,
+              `inverters.${i}.dcCapacityKwp`,
+            ])
+            .flat();
 
     const valid = await trigger(fields as never);
     if (valid) setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -239,10 +258,21 @@ export function SetupWizard() {
 
         {step === 1 && (
           <div className="space-y-4">
-            {Array.from({ length: NUM_INVERTERS }).map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
+            {inverterFields.map((field, i) => (
+              <Card key={field.id}>
+                <CardHeader className="flex-row items-center justify-between space-y-0">
                   <CardTitle className="text-base">Inverter {i + 1}</CardTitle>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => remove(i)}
+                    disabled={inverterFields.length <= 1}
+                    aria-label="Remove inverter"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="space-y-2">
@@ -308,6 +338,15 @@ export function SetupWizard() {
                 </CardContent>
               </Card>
             ))}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => append(blankInverter(inverterFields.length + 1))}
+            >
+              <Plus className="size-4" />
+              Add inverter
+            </Button>
           </div>
         )}
 
@@ -327,7 +366,7 @@ export function SetupWizard() {
                 {String(watch("site.longitude"))})
               </p>
               <p className="text-muted-foreground">
-                {NUM_INVERTERS} inverters —{" "}
+                {inverterFields.length} inverter{inverterFields.length === 1 ? "" : "s"} —{" "}
                 {watch("inverters")
                   .map((inv) => inv.name)
                   .join(", ")}
