@@ -18,3 +18,36 @@ export const signUpSchema = z
     path: ["confirmPassword"],
   });
 export type SignUpInput = z.infer<typeof signUpSchema>;
+
+export const siteSchema = z.object({
+  name: z.string().min(1, "Site name is required").max(200),
+  address: z.string().max(500).optional().or(z.literal("")),
+  latitude: z.coerce.number().min(-90).max(90),
+  longitude: z.coerce.number().min(-180).max(180),
+  commissioningDate: z.string().optional().or(z.literal("")),
+  tariffRateInrPerKwh: z.coerce.number().min(0).max(100).optional(),
+  isPublic: z.boolean().default(false),
+});
+export type SiteInput = z.infer<typeof siteSchema>;
+
+export const inverterSchema = z.object({
+  name: z.string().min(1, "Inverter name is required").max(100),
+  manufacturer: z.string().max(100).optional().or(z.literal("")),
+  model: z.string().max(100).optional().or(z.literal("")),
+  ratedCapacityKw: z.coerce.number().positive("Must be greater than 0").max(1000),
+  dcCapacityKwp: z.coerce.number().positive("Must be greater than 0").max(1000),
+  installDate: z.string().optional().or(z.literal("")),
+});
+export type InverterInput = z.infer<typeof inverterSchema>;
+
+export const NUM_INVERTERS = 4;
+
+export const setupSchema = z.object({
+  site: siteSchema,
+  inverters: z.array(inverterSchema).length(NUM_INVERTERS),
+});
+// `latitude`/`ratedCapacityKw`/etc use z.coerce.number(), so the raw form
+// values (strings, as HTML inputs produce) differ from the parsed/validated
+// output (numbers) — react-hook-form needs both shapes.
+export type SetupFormValues = z.input<typeof setupSchema>;
+export type SetupInput = z.output<typeof setupSchema>;

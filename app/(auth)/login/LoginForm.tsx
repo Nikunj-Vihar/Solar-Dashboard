@@ -42,7 +42,6 @@ function SignInPanel() {
     }
     const next = searchParams.get("next") ?? "/";
     router.replace(next);
-    router.refresh();
   }
 
   return (
