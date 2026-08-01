@@ -83,6 +83,19 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
     }
   }
 
+  /**
+   * Deletes the site row first (fast, simple delete, cascades to
+   * inverters/readings/alerts), then the auth user -- deleting a user with a
+   * large cascade in one GoTrue-managed transaction can time out
+   * (AuthRetryableFetchError), which silently orphaned test accounts when
+   * this only called deleteUser() directly.
+   */
+  async function cleanupSite(id: string) {
+    await admin.from("sites").delete().eq("owner_id", id);
+    const { error } = await admin.auth.admin.deleteUser(id);
+    if (error) throw new Error(`Failed to clean up test user ${id}: ${error.message}`);
+  }
+
   beforeAll(async () => {
     admin = createClient(url!, serviceRoleKey!);
     const seeded = await seedSite("underperf");
@@ -92,7 +105,7 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
   });
 
   afterAll(async () => {
-    await admin.auth.admin.deleteUser(userId);
+    await cleanupSite(userId);
   });
 
   it("flags the one inverter deliberately logged low, and no one else", async () => {
@@ -161,7 +174,7 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
 
     expect(alerts).toEqual([]);
 
-    await admin.auth.admin.deleteUser(site2.userId);
+    await cleanupSite(site2.userId);
   });
 
   it("flags a missing reading after 2+ days of silence", async () => {
@@ -196,7 +209,7 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
     expect(alerts.length).toBe(4);
     expect(alerts[0].message).toMatch(/No reading logged/);
 
-    await admin.auth.admin.deleteUser(site4.userId);
+    await cleanupSite(site4.userId);
   });
 
   it("flags a site-wide baseline deviation and resolves it once corrected", async () => {
@@ -246,6 +259,6 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
 
     expect(resolvedCheck).toEqual([]);
 
-    await admin.auth.admin.deleteUser(site3.userId);
+    await cleanupSite(site3.userId);
   });
 });
