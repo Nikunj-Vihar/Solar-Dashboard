@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InfoTooltip } from "@/components/InfoTooltip";
 import {
   buildTrendData,
   densifyDailyTotals,
@@ -123,6 +124,11 @@ export function TrendChart({
               <span className="flex items-center gap-1.5">
                 <span className="inline-block size-2.5 rounded-sm bg-[--viz-series-1] opacity-15" />
                 Expected range
+                <InfoTooltip>
+                  A low/mid/high generation estimate for each period, computed from your site&apos;s
+                  solar irradiance (via NASA&apos;s POWER dataset) and installed capacity — not a
+                  guarantee, just a plausible range to compare against.
+                </InfoTooltip>
               </span>
             </div>
             <div

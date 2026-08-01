@@ -1,5 +1,6 @@
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { InfoTooltip } from "@/components/InfoTooltip";
 import { computeRupeeSaved, computeCo2OffsetKg, computeVsBaselinePercent } from "@/lib/calc/kpis";
 import { formatInr, formatKwh, formatPercent } from "@/lib/format";
 
@@ -24,7 +25,22 @@ export function ImpactFigures({
       {rupeeSaved !== null && (
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Estimated savings this month</p>
+            <p className="flex items-center gap-1 text-sm text-muted-foreground">
+              Estimated savings this month
+              <InfoTooltip>
+                <p>
+                  {formatKwh(monthKwh)} generated this month × your configured tariff rate of{" "}
+                  {tariffRateInrPerKwh !== null ? `₹${tariffRateInrPerKwh}/kWh` : ""}
+                  {" = "}what that electricity would have cost from the grid. An estimate, not a
+                  certified figure — change your tariff rate in Settings if it&apos;s out of date.
+                </p>
+                <p className="mt-2">
+                  &quot;vs. expected&quot; compares actual generation to a baseline computed from
+                  your site&apos;s solar irradiance (via NASA&apos;s POWER dataset) and installed
+                  capacity.
+                </p>
+              </InfoTooltip>
+            </p>
             <p className="mt-1 text-2xl font-semibold">{formatInr(rupeeSaved)}</p>
             {vsBaseline !== null && (
               <p
@@ -40,21 +56,22 @@ export function ImpactFigures({
                 {formatPercent(vsBaseline, { showSign: true })} vs. expected for this month
               </p>
             )}
-            <p className="mt-2 text-xs text-muted-foreground">
-              Estimate based on your configured tariff rate — not a certified figure.
-            </p>
           </CardContent>
         </Card>
       )}
       <Card>
         <CardContent className="pt-6">
-          <p className="text-sm text-muted-foreground">Estimated CO2 offset this month</p>
+          <p className="flex items-center gap-1 text-sm text-muted-foreground">
+            Estimated CO2 offset this month
+            <InfoTooltip>
+              {formatKwh(monthKwh)} generated this month × a standard grid emission factor of{" "}
+              {gridEmissionFactorKgPerKwh} kg CO2/kWh — roughly what generating that same
+              electricity from the grid would have emitted. An approximation, not a certified
+              measurement.
+            </InfoTooltip>
+          </p>
           <p className="mt-1 text-2xl font-semibold">
             {co2OffsetKg.toLocaleString(undefined, { maximumFractionDigits: 0 })} kg
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {formatKwh(monthKwh)} generated · approximate, based on a standard grid emission
-            factor.
           </p>
         </CardContent>
       </Card>
