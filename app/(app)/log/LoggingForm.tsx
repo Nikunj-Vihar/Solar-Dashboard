@@ -4,14 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronLeft, ChevronRight, Loader2, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   dailyLogSchema,
   type DailyLogFormValues,
   type DailyLogInput,
 } from "@/lib/validation/schemas";
-import { submitDailyLog, type ConfirmationIssue } from "./actions";
+import { submitDailyLog, deleteDailyReading, type ConfirmationIssue } from "./actions";
 import { addDays } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,15 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 type InverterRowData = {
   id: string;
@@ -28,6 +37,55 @@ type InverterRowData = {
   previousDailyKwh: number | null;
   previousCumulativeMwh: number | null;
 };
+
+function DeleteReadingDialog({
+  inverterName,
+  onConfirm,
+}: {
+  inverterName: string;
+  onConfirm: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground hover:text-destructive"
+            aria-label={`Delete ${inverterName}'s reading`}
+            nativeButton
+          />
+        }
+      >
+        <Trash2 className="size-4" />
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete this reading?</DialogTitle>
+          <DialogDescription>
+            {inverterName}&apos;s entry for this day will be removed so you can log it fresh.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => {
+              onConfirm();
+              setOpen(false);
+            }}
+          >
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function LoggingForm({
   date,
@@ -41,6 +99,7 @@ export function LoggingForm({
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [issuesByInverter, setIssuesByInverter] = useState<Record<string, ConfirmationIssue>>({});
+  const [editingIds, setEditingIds] = useState<Set<string>>(new Set());
 
   const defaultValues: DailyLogFormValues = {
     date,
@@ -75,6 +134,7 @@ export function LoggingForm({
 
     if (result.ok) {
       setIssuesByInverter({});
+      setEditingIds(new Set());
       toast.success("Readings saved");
       router.refresh();
       return;
@@ -91,6 +151,22 @@ export function LoggingForm({
     }
 
     toast.error(result.error);
+  }
+
+  async function handleDelete(inverterId: string) {
+    const result = await deleteDailyReading(inverterId, date);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    const index = inverters.findIndex((inv) => inv.id === inverterId);
+    if (index !== -1) {
+      setValue(`readings.${index}.dailyKwh`, "");
+      setValue(`readings.${index}.cumulativeMwh`, "");
+    }
+    setEditingIds((prev) => new Set(prev).add(inverterId));
+    toast.success("Reading deleted");
+    router.refresh();
   }
 
   const isToday = date === today;
@@ -132,52 +208,75 @@ export function LoggingForm({
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         {inverters.map((inv, i) => {
           const issue = issuesByInverter[inv.id];
+          const isEditing = editingIds.has(inv.id) || !inv.existing;
+
           return (
             <Card key={inv.id}>
               <CardContent className="space-y-3 pt-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{inv.name}</span>
-                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Checkbox
-                      checked={watch(`readings.${i}.isReset`) ?? false}
-                      onCheckedChange={(v) => setValue(`readings.${i}.isReset`, v === true)}
-                    />
-                    Replaced/reset
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`daily-${i}`} className="text-xs">
-                      Daily (kWh)
-                    </Label>
-                    <Input
-                      id={`daily-${i}`}
-                      inputMode="decimal"
-                      autoComplete="off"
-                      placeholder={
-                        inv.previousDailyKwh !== null ? `Yesterday: ${inv.previousDailyKwh}` : "0"
-                      }
-                      {...register(`readings.${i}.dailyKwh`)}
-                    />
+                {isEditing ? (
+                  <>
+                    <span className="font-medium">{inv.name}</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`daily-${i}`} className="text-xs">
+                          Daily (kWh)
+                        </Label>
+                        <Input
+                          id={`daily-${i}`}
+                          inputMode="decimal"
+                          autoComplete="off"
+                          placeholder={
+                            inv.previousDailyKwh !== null
+                              ? `Yesterday: ${inv.previousDailyKwh}`
+                              : "0"
+                          }
+                          {...register(`readings.${i}.dailyKwh`)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`cumulative-${i}`} className="text-xs">
+                          Cumulative (MWh)
+                        </Label>
+                        <Input
+                          id={`cumulative-${i}`}
+                          inputMode="decimal"
+                          autoComplete="off"
+                          placeholder={
+                            inv.previousCumulativeMwh !== null
+                              ? `Yesterday: ${inv.previousCumulativeMwh}`
+                              : "0"
+                          }
+                          {...register(`readings.${i}.cumulativeMwh`)}
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-medium">{inv.name}</span>
+                      <p className="text-sm text-muted-foreground">
+                        {inv.existing!.dailyKwh} kWh · cumulative {inv.existing!.cumulativeMwh} MWh
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground hover:text-foreground"
+                        aria-label={`Edit ${inv.name}'s reading`}
+                        onClick={() => setEditingIds((prev) => new Set(prev).add(inv.id))}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <DeleteReadingDialog
+                        inverterName={inv.name}
+                        onConfirm={() => handleDelete(inv.id)}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`cumulative-${i}`} className="text-xs">
-                      Cumulative (MWh)
-                    </Label>
-                    <Input
-                      id={`cumulative-${i}`}
-                      inputMode="decimal"
-                      autoComplete="off"
-                      placeholder={
-                        inv.previousCumulativeMwh !== null
-                          ? `Yesterday: ${inv.previousCumulativeMwh}`
-                          : "0"
-                      }
-                      {...register(`readings.${i}.cumulativeMwh`)}
-                    />
-                  </div>
-                </div>
+                )}
 
                 {(errors.readings?.[i]?.dailyKwh || errors.readings?.[i]?.cumulativeMwh) && (
                   <p className="text-sm text-destructive">
@@ -200,6 +299,15 @@ export function LoggingForm({
                             }
                           />
                           Yes, this is correct
+                        </label>
+                      )}
+                      {issue.issue === "cumulative_decreased" && (
+                        <label className="mt-2 flex items-center gap-1.5 text-sm font-medium">
+                          <Checkbox
+                            checked={watch(`readings.${i}.isReset`) ?? false}
+                            onCheckedChange={(v) => setValue(`readings.${i}.isReset`, v === true)}
+                          />
+                          Yes, the meter was replaced or reset
                         </label>
                       )}
                     </AlertDescription>

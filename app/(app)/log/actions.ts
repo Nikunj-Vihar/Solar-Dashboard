@@ -95,7 +95,7 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
         inverterId: r.inverterId,
         inverterName: inverter.name,
         issue: "cumulative_decreased",
-        message: `Cumulative (${r.cumulativeMwh} MWh) is lower than yesterday's (${previousCumulativeMwh} MWh). If this inverter was replaced or reset, check "Replaced/reset" below.`,
+        message: `Cumulative (${r.cumulativeMwh} MWh) is lower than yesterday's (${previousCumulativeMwh} MWh). If this inverter's meter was replaced or reset, confirm below.`,
       });
     } else if (check.status === "mismatch" && !r.confirmMismatch) {
       confirmations.push({
@@ -132,5 +132,41 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
   revalidatePath("/dashboard");
   revalidatePath("/log");
 
+  return { ok: true };
+}
+
+export type DeleteDailyReadingResult = { ok: true } | { ok: false; error: string };
+
+export async function deleteDailyReading(
+  inverterId: string,
+  date: string,
+): Promise<DeleteDailyReadingResult> {
+  const user = await getAuthedUser();
+  if (!user) {
+    return { ok: false, error: "You must be signed in." };
+  }
+
+  const supabase = await createClient();
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id")
+    .eq("owner_id", user.id)
+    .maybeSingle();
+  if (!site) {
+    return { ok: false, error: "Site not found." };
+  }
+
+  const { error } = await supabase
+    .from("daily_readings")
+    .delete()
+    .eq("inverter_id", inverterId)
+    .eq("reading_date", date)
+    .eq("site_id", site.id);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/log");
   return { ok: true };
 }
