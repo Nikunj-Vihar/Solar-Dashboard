@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -79,14 +79,26 @@ function SignInPanel() {
 
 function SignUpPanel() {
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [signedUp, setSignedUp] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<SignUpInput>({ resolver: zodResolver(signUpSchema) });
+
+  useEffect(() => {
+    if (!signedUp) return;
+    // Fire-and-forget: a welcome email should never block getting into the
+    // app. No email confirmation step -- signups are auto-confirmed, so the
+    // session is already active at this point.
+    // sendBeacon, not fetch: the immediately-following hard navigation can
+    // cancel an in-flight fetch before it reaches the server, but a beacon
+    // is specifically designed to survive that.
+    navigator.sendBeacon("/api/welcome-email");
+    window.location.href = "/setup";
+  }, [signedUp]);
 
   async function onSubmit(values: SignUpInput) {
     setError(null);
@@ -97,25 +109,14 @@ function SignUpPanel() {
       password: values.password,
       options: {
         data: { full_name: values.fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setError(error.message);
       return;
     }
-    setSubmitted(true);
-  }
-
-  if (submitted) {
-    return (
-      <Alert>
-        <AlertDescription>
-          Check your email to confirm your account, then sign in.
-        </AlertDescription>
-      </Alert>
-    );
+    setSignedUp(true);
   }
 
   return (
