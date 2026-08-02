@@ -16,7 +16,7 @@ export function AlertsList({ alerts }: { alerts: Alert[] }) {
       <CardContent>
         {alerts.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CheckCircle2 className="size-4 text-[--viz-status-good]" />
+            <CheckCircle2 className="size-4 text-(--viz-status-good)" />
             No alerts — everything looks normal.
           </div>
         ) : (
@@ -25,8 +25,8 @@ export function AlertsList({ alerts }: { alerts: Alert[] }) {
               const Icon = alert.severity === "needs_attention" ? AlertOctagon : AlertTriangle;
               const colorClass =
                 alert.severity === "needs_attention"
-                  ? "text-[--viz-status-critical]"
-                  : "text-[--viz-status-warning]";
+                  ? "text-(--viz-status-critical)"
+                  : "text-(--viz-status-warning)";
               return (
                 <li key={alert.id} className={`flex items-start gap-2 text-sm ${colorClass}`}>
                   <Icon className="mt-0.5 size-4 shrink-0" />

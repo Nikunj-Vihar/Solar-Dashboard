@@ -45,7 +45,7 @@ export function ImpactFigures({
             {vsBaseline !== null && (
               <p
                 className={`mt-1 flex items-center gap-1 text-sm ${
-                  vsBaseline >= 0 ? "text-[--viz-status-good]" : "text-muted-foreground"
+                  vsBaseline >= 0 ? "text-(--viz-status-good)" : "text-muted-foreground"
                 }`}
               >
                 {vsBaseline >= 0 ? (

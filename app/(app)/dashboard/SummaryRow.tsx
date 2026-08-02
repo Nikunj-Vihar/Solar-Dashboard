@@ -11,17 +11,17 @@ const HEALTH_CONFIG: Record<
   good: {
     label: "Good",
     icon: CheckCircle2,
-    className: "text-[--viz-status-good]",
+    className: "text-(--viz-status-good)",
   },
   watch: {
     label: "Watch",
     icon: AlertTriangle,
-    className: "text-[--viz-status-warning]",
+    className: "text-(--viz-status-warning)",
   },
   needs_attention: {
     label: "Needs Attention",
     icon: AlertOctagon,
-    className: "text-[--viz-status-critical]",
+    className: "text-(--viz-status-critical)",
   },
 };
 
