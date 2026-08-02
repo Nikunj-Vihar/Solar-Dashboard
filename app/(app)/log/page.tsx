@@ -42,6 +42,7 @@ export default async function LogPage({
               dailyKwh: existing.daily_kwh,
               cumulativeMwh: existing.cumulative_mwh,
               isReset: existing.is_reset,
+              noReading: existing.no_reading,
             }
           : null,
         previousDailyKwh: previous?.daily_kwh ?? null,
@@ -54,7 +55,8 @@ export default async function LogPage({
       date={date}
       today={today}
       inverters={inverters}
-      loggedDates={Array.from(loggedDates)}
+      loggedDates={Array.from(loggedDates.logged)}
+      skippedDates={Array.from(loggedDates.skipped)}
     />
   );
 }

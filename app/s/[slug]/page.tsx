@@ -15,14 +15,14 @@ type PublicDashboardData = {
   month_kwh: number;
   lifetime_kwh: number;
   per_inverter_today: { name: string; kwh: number }[];
-  trend_90d: { date: string; kwh: number }[];
+  trend_90d: { date: string; kwh: number | null }[];
   health_status: "Good" | "Watch" | "Needs Attention";
 };
 
 const HEALTH_CONFIG = {
-  Good: { icon: CheckCircle2, className: "text-[--viz-status-good]" },
-  Watch: { icon: AlertTriangle, className: "text-[--viz-status-warning]" },
-  "Needs Attention": { icon: AlertOctagon, className: "text-[--viz-status-critical]" },
+  Good: { icon: CheckCircle2, className: "text-(--viz-status-good)" },
+  Watch: { icon: AlertTriangle, className: "text-(--viz-status-warning)" },
+  "Needs Attention": { icon: AlertOctagon, className: "text-(--viz-status-critical)" },
 } as const;
 
 export default async function PublicDashboardPage({

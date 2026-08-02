@@ -177,6 +177,78 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
     await cleanupSite(site2.userId);
   });
 
+  it("a no_reading entry resolves the missing-reading alert without faking a baseline deviation", async () => {
+    const site5 = await seedSite("noreading");
+
+    // Stale for 4 days -> missing_reading should fire for every inverter.
+    const staleDate = ymd(daysAgo(4));
+    await insertReadingsInChunks(
+      site5.inverterIds.map((id) => ({
+        inverter_id: id,
+        site_id: site5.siteId,
+        reading_date: staleDate,
+        daily_kwh: 25,
+        cumulative_mwh: 10.025,
+        entered_by: site5.userId,
+      })),
+    );
+    const { error: rpcErr1 } = await admin.rpc("refresh_alerts", { p_site_id: site5.siteId });
+    if (rpcErr1) throw rpcErr1;
+    const { data: before, error: beforeErr } = await admin
+      .from("alerts")
+      .select("id")
+      .eq("site_id", site5.siteId)
+      .eq("alert_type", "missing_reading")
+      .eq("is_resolved", false);
+    if (beforeErr) throw beforeErr;
+    expect(before.length).toBe(4);
+
+    // Explicitly mark every inverter as "no reading" for today rather than
+    // logging real numbers.
+    const today = ymd(daysAgo(0));
+    await insertReadingsInChunks(
+      site5.inverterIds.map((id) => ({
+        inverter_id: id,
+        site_id: site5.siteId,
+        reading_date: today,
+        daily_kwh: null,
+        cumulative_mwh: null,
+        no_reading: true,
+        entered_by: site5.userId,
+      })),
+    );
+    const { error: rpcErr2 } = await admin.rpc("refresh_alerts", { p_site_id: site5.siteId });
+    if (rpcErr2) throw rpcErr2;
+
+    const { data: afterMissing, error: afterErr } = await admin
+      .from("alerts")
+      .select("id")
+      .eq("site_id", site5.siteId)
+      .eq("alert_type", "missing_reading")
+      .eq("is_resolved", false);
+    if (afterErr) throw afterErr;
+    expect(afterMissing).toEqual([]);
+
+    // A day where every inverter is no_reading has zero real generation to
+    // compare against the baseline -- it should be skipped, not flagged as
+    // "100% below baseline".
+    const { error: baselineErr } = await admin.rpc("check_daily_baseline_deviation", {
+      p_site_id: site5.siteId,
+      p_reading_date: today,
+    });
+    if (baselineErr) throw baselineErr;
+    const { data: deviationAlerts, error: devErr } = await admin
+      .from("alerts")
+      .select("id")
+      .eq("site_id", site5.siteId)
+      .eq("alert_type", "baseline_deviation")
+      .eq("is_resolved", false);
+    if (devErr) throw devErr;
+    expect(deviationAlerts).toEqual([]);
+
+    await cleanupSite(site5.userId);
+  });
+
   it("flags a missing reading after 2+ days of silence", async () => {
     const site4 = await seedSite("missing");
 

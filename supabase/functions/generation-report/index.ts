@@ -203,7 +203,12 @@ Deno.serve(async (req: Request) => {
       .gte("reading_date", period.start)
       .lte("reading_date", period.end);
 
-    const distinctDays = new Set((readings ?? []).map((r) => r.reading_date)).size;
+    // Only count days with at least one real reading -- a day where every
+    // inverter was marked "no reading" has a row but no real daily_kwh, and
+    // shouldn't count toward "enough data to report on".
+    const distinctDays = new Set(
+      (readings ?? []).filter((r) => r.daily_kwh !== null).map((r) => r.reading_date),
+    ).size;
     if (distinctDays < period.minDaysWithData) {
       results.push({
         site: site.name,

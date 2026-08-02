@@ -36,11 +36,13 @@ export function LogCalendar({
   selectedDate,
   today,
   loggedDates,
+  skippedDates,
   onSelect,
 }: {
   selectedDate: string;
   today: string;
   loggedDates: Set<string>;
+  skippedDates: Set<string>;
   onSelect: (date: string) => void;
 }) {
   // `selectedDate` only catches up once the ?date= navigation actually
@@ -110,6 +112,7 @@ export function LogCalendar({
             const isToday = isSameDay(day, todayDate);
             const isFuture = isAfter(day, todayDate);
             const hasData = loggedDates.has(dateStr);
+            const isSkipped = !hasData && skippedDates.has(dateStr);
 
             return (
               <button
@@ -133,7 +136,19 @@ export function LogCalendar({
                   <span
                     className={cn(
                       "absolute bottom-0.5 size-1 rounded-full",
-                      isSelected ? "bg-primary-foreground" : "bg-[--viz-status-good]",
+                      isSelected ? "bg-primary-foreground" : "bg-(--viz-status-good)",
+                    )}
+                  />
+                )}
+                {/* Hollow dot: explicitly marked "no reading" rather than logged --
+                    kept visually distinct so it doesn't read as a day with real data. */}
+                {isSkipped && (
+                  <span
+                    className={cn(
+                      "absolute bottom-0.5 size-1 rounded-full border",
+                      isSelected
+                        ? "border-primary-foreground"
+                        : "border-muted-foreground/50",
                     )}
                   />
                 )}

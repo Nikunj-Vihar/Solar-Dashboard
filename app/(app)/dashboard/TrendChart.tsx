@@ -30,7 +30,7 @@ const WINDOW_BY_GRANULARITY: Record<TrendGranularity, number> = {
 
 type TrendTooltipPoint = {
   label: string;
-  actualKwh: number;
+  actualKwh: number | null;
   expectedLowKwh: number;
   expectedHighKwh: number;
 };
@@ -48,8 +48,8 @@ function TrendTooltip({
     <div className="rounded-md border bg-popover px-3 py-2 text-xs shadow-sm">
       <p className="mb-1 font-medium text-foreground">{point.label}</p>
       <p className="flex items-center gap-1.5 text-foreground">
-        <span className="inline-block h-0.5 w-3 rounded-full bg-[--viz-series-1]" />
-        Actual: {formatKwh(point.actualKwh)}
+        <span className="inline-block h-0.5 w-3 rounded-full bg-(--viz-series-1)" />
+        Actual: {point.actualKwh === null ? "No reading" : formatKwh(point.actualKwh)}
       </p>
       <p className="mt-0.5 text-muted-foreground">
         Expected: {formatKwh(point.expectedLowKwh)} – {formatKwh(point.expectedHighKwh)}
@@ -63,7 +63,7 @@ export function TrendChart({
   baseline,
   today,
 }: {
-  readings: { date: string; kwh: number }[];
+  readings: { date: string; kwh: number | null }[];
   baseline: MonthlyBaselineRow[];
   today: string;
 }) {
@@ -118,11 +118,11 @@ export function TrendChart({
           <>
             <div className="mb-2 flex items-center gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
-                <span className="inline-block h-0.5 w-3 rounded-full bg-[--viz-series-1]" />
+                <span className="inline-block h-0.5 w-3 rounded-full bg-(--viz-series-1)" />
                 Actual
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="inline-block size-2.5 rounded-sm bg-[--viz-series-1] opacity-15" />
+                <span className="inline-block size-2.5 rounded-sm bg-(--viz-series-1) opacity-15" />
                 Expected range
                 <InfoTooltip>
                   A low/mid/high generation estimate for each period, computed from your site&apos;s
@@ -172,6 +172,7 @@ export function TrendChart({
                     stroke="var(--viz-series-1)"
                     strokeWidth={2}
                     dot={false}
+                    connectNulls={false}
                     isAnimationActive={false}
                     name="Actual"
                   />

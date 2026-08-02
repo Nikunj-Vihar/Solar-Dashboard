@@ -18,9 +18,12 @@ import { formatKwh } from "@/lib/format";
 export function InverterBarChart({
   data,
 }: {
-  data: { inverterId: string; name: string; kwh: number }[];
+  data: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
 }) {
-  const underperformingId = findUnderperformingInverter(data);
+  // An inverter explicitly marked "no reading" today has no real number to
+  // compare -- excluding it here means it's never flagged as the
+  // underperformer just for having nothing logged yet.
+  const underperformingId = findUnderperformingInverter(data.filter((d) => !d.noReading));
 
   return (
     <Card>
@@ -29,7 +32,7 @@ export function InverterBarChart({
       </CardHeader>
       <CardContent>
         {underperformingId && (
-          <div className="mb-3 flex items-center gap-1.5 text-sm text-[--viz-status-warning]">
+          <div className="mb-3 flex items-center gap-1.5 text-sm text-(--viz-status-warning)">
             <AlertTriangle className="size-4 shrink-0" />
             <span>
               {data.find((d) => d.inverterId === underperformingId)?.name} is generating

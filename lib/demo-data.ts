@@ -34,7 +34,7 @@ export type DemoDashboardData = {
   todayKwh: number;
   monthKwh: number;
   lifetimeKwh: number;
-  perInverterToday: { inverterId: string; name: string; kwh: number }[];
+  perInverterToday: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
   allReadings: { date: string; kwh: number }[];
   baseline: typeof DEMO_BASELINE;
   alerts: {
@@ -95,6 +95,7 @@ export function getDemoDashboardData(): DemoDashboardData {
     inverterId: inv.id,
     name: inv.name,
     kwh: todayRows.find((r) => r.inverterId === inv.id)?.kwh ?? 0,
+    noReading: false, // demo data never has an explicit no-reading gap
   }));
 
   const lastMissingDay = addDays(today, -Math.min(...MISSING_READING_GAP_DAYS_AGO));

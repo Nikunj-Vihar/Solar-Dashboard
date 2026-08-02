@@ -8,8 +8,8 @@ export type DashboardData = {
   todayKwh: number;
   monthKwh: number;
   lifetimeKwh: number;
-  perInverterToday: { inverterId: string; name: string; kwh: number }[];
-  allReadings: { date: string; kwh: number }[];
+  perInverterToday: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
+  allReadings: { date: string; kwh: number | null }[];
   baseline: {
     month: number;
     expectedDailyKwhLow: number;
@@ -33,7 +33,7 @@ export async function getDashboardData(site: SiteWithInverters): Promise<Dashboa
   const [{ data: readings }, { data: baselineRows }, { data: alertRows }] = await Promise.all([
     supabase
       .from("daily_readings")
-      .select("reading_date, inverter_id, daily_kwh")
+      .select("reading_date, inverter_id, daily_kwh, no_reading")
       .eq("site_id", site.id)
       .order("reading_date"),
     supabase
@@ -52,20 +52,28 @@ export async function getDashboardData(site: SiteWithInverters): Promise<Dashboa
   const rows = readings ?? [];
   const todayRows = rows.filter((r) => r.reading_date === today);
   const monthRows = rows.filter((r) => r.reading_date.startsWith(currentMonth));
+  // Real (non-skipped) rows only, for the summed totals below -- a "no
+  // reading" row's null daily_kwh should contribute nothing, not a 0.
+  const realKwh = (rs: typeof rows) =>
+    rs.filter((r) => r.daily_kwh !== null).map((r) => r.daily_kwh as number);
 
   const perInverterToday = site.inverters
     .filter((inv) => inv.is_active)
-    .map((inv) => ({
-      inverterId: inv.id,
-      name: inv.name,
-      kwh: todayRows.find((r) => r.inverter_id === inv.id)?.daily_kwh ?? 0,
-    }));
+    .map((inv) => {
+      const row = todayRows.find((r) => r.inverter_id === inv.id);
+      return {
+        inverterId: inv.id,
+        name: inv.name,
+        kwh: row?.daily_kwh ?? 0,
+        noReading: row?.no_reading ?? false,
+      };
+    });
 
   return {
     today,
-    todayKwh: sum(todayRows.map((r) => r.daily_kwh)),
-    monthKwh: sum(monthRows.map((r) => r.daily_kwh)),
-    lifetimeKwh: sum(rows.map((r) => r.daily_kwh)),
+    todayKwh: sum(realKwh(todayRows)),
+    monthKwh: sum(realKwh(monthRows)),
+    lifetimeKwh: sum(realKwh(rows)),
     perInverterToday,
     allReadings: rows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh })),
     baseline: (baselineRows ?? []).map((b) => ({

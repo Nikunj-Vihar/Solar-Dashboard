@@ -21,7 +21,9 @@ export async function GET() {
   // regardless; the .eq is defense-in-depth against a future policy change.
   const { data: readings, error } = await supabase
     .from("daily_readings")
-    .select("reading_date, daily_kwh, cumulative_mwh, is_reset, mismatch_confirmed, inverters(name)")
+    .select(
+      "reading_date, daily_kwh, cumulative_mwh, is_reset, mismatch_confirmed, no_reading, inverters(name)",
+    )
     .eq("site_id", site.id)
     .order("reading_date", { ascending: true });
 
@@ -31,10 +33,11 @@ export async function GET() {
 
   type Row = {
     reading_date: string;
-    daily_kwh: number;
-    cumulative_mwh: number;
+    daily_kwh: number | null;
+    cumulative_mwh: number | null;
     is_reset: boolean;
     mismatch_confirmed: boolean;
+    no_reading: boolean;
     inverters: { name: string } | { name: string }[] | null;
   };
 
@@ -46,6 +49,7 @@ export async function GET() {
     },
     { header: "Daily kWh", value: (r) => r.daily_kwh },
     { header: "Cumulative MWh", value: (r) => r.cumulative_mwh },
+    { header: "No reading", value: (r) => r.no_reading },
     { header: "Meter reset", value: (r) => r.is_reset },
     { header: "Mismatch confirmed", value: (r) => r.mismatch_confirmed },
   ]);

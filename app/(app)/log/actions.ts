@@ -73,19 +73,23 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
   const confirmations: ConfirmationIssue[] = [];
 
   for (const r of readings) {
+    if (r.noReading) continue; // nothing to sanity-check against a day with no numbers
     const inverter = inverterById.get(r.inverterId)!;
+    // Guaranteed defined for a non-skipped row by readingEntrySchema's refine.
+    const dailyKwh = r.dailyKwh!;
+    const cumulativeMwh = r.cumulativeMwh!;
 
-    if (exceedsPhysicalCapacity(r.dailyKwh, inverter.dc_capacity_kwp)) {
+    if (exceedsPhysicalCapacity(dailyKwh, inverter.dc_capacity_kwp)) {
       return {
         ok: false,
-        error: `${inverter.name}: ${r.dailyKwh} kWh is above what its DC capacity (${inverter.dc_capacity_kwp} kWp) could plausibly produce in a day — check for a typo.`,
+        error: `${inverter.name}: ${dailyKwh} kWh is above what its DC capacity (${inverter.dc_capacity_kwp} kWp) could plausibly produce in a day — check for a typo.`,
       };
     }
 
     const previousCumulativeMwh = previousByInverter.get(r.inverterId) ?? null;
     const check = checkCumulativeAndCrossCheck({
-      dailyKwh: r.dailyKwh,
-      cumulativeMwh: r.cumulativeMwh,
+      dailyKwh,
+      cumulativeMwh,
       previousCumulativeMwh,
       isReset: r.isReset,
     });
@@ -95,14 +99,14 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
         inverterId: r.inverterId,
         inverterName: inverter.name,
         issue: "cumulative_decreased",
-        message: `Cumulative (${r.cumulativeMwh} MWh) is lower than yesterday's (${previousCumulativeMwh} MWh). If this inverter's meter was replaced or reset, confirm below.`,
+        message: `Cumulative (${cumulativeMwh} MWh) is lower than yesterday's (${previousCumulativeMwh} MWh). If this inverter's meter was replaced or reset, confirm below.`,
       });
     } else if (check.status === "mismatch" && !r.confirmMismatch) {
       confirmations.push({
         inverterId: r.inverterId,
         inverterName: inverter.name,
         issue: "mismatch",
-        message: `You entered ${r.dailyKwh} kWh, but the cumulative counter only moved ${check.computedDeltaKwh} kWh since yesterday. Double-check for a typo, or confirm this is correct.`,
+        message: `You entered ${dailyKwh} kWh, but the cumulative counter only moved ${check.computedDeltaKwh} kWh since yesterday. Double-check for a typo, or confirm this is correct.`,
       });
     }
   }
@@ -116,10 +120,11 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
       inverter_id: r.inverterId,
       site_id: site.id,
       reading_date: date,
-      daily_kwh: r.dailyKwh,
-      cumulative_mwh: r.cumulativeMwh,
-      is_reset: r.isReset,
-      mismatch_confirmed: r.confirmMismatch,
+      daily_kwh: r.noReading ? null : r.dailyKwh,
+      cumulative_mwh: r.noReading ? null : r.cumulativeMwh,
+      is_reset: r.noReading ? false : r.isReset,
+      mismatch_confirmed: r.noReading ? false : r.confirmMismatch,
+      no_reading: r.noReading,
       entered_by: user.id,
     })),
     { onConflict: "inverter_id,reading_date" },

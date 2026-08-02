@@ -33,7 +33,7 @@ export function PublicInverterBarChart({ data }: { data: { name: string; kwh: nu
   );
 }
 
-export function PublicTrendChart({ data }: { data: { date: string; kwh: number }[] }) {
+export function PublicTrendChart({ data }: { data: { date: string; kwh: number | null }[] }) {
   const chartData = data.map((d) => ({
     label: new Date(`${d.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     kwh: d.kwh,
@@ -60,13 +60,14 @@ export function PublicTrendChart({ data }: { data: { date: string; kwh: number }
               borderRadius: "var(--radius-md)",
               fontSize: 12,
             }}
-            formatter={(value) => [formatKwh(Number(value)), "Generated"]}
+            formatter={(value) => [value === null ? "No reading" : formatKwh(Number(value)), "Generated"]}
           />
           <Line
             dataKey="kwh"
             stroke="var(--viz-series-1)"
             strokeWidth={2}
             dot={false}
+            connectNulls={false}
             isAnimationActive={false}
           />
         </LineChart>

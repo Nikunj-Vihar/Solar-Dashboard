@@ -6,7 +6,7 @@ import { addDays } from "@/lib/date";
  * matching baseline band alongside so actual and expected stay aligned.
  */
 
-export type DailyReadingTotal = { date: string; totalKwh: number };
+export type DailyReadingTotal = { date: string; totalKwh: number | null };
 
 export type MonthlyBaselineRow = {
   month: number; // 1-12
@@ -20,7 +20,7 @@ export type TrendGranularity = "day" | "week" | "month";
 export type TrendPoint = {
   label: string;
   date: string;
-  actualKwh: number;
+  actualKwh: number | null;
   expectedLowKwh: number;
   expectedMidKwh: number;
   expectedHighKwh: number;
@@ -62,13 +62,19 @@ export function buildTrendData(
   granularity: TrendGranularity,
 ): TrendPoint[] {
   const baselineByMonth = new Map(baseline.map((b) => [b.month, b]));
-  const buckets = new Map<string, { actual: number; low: number; mid: number; high: number }>();
+  const buckets = new Map<
+    string,
+    { actual: number; low: number; mid: number; high: number; hasData: boolean }
+  >();
 
   for (const { date, totalKwh } of readings) {
     const key = bucketKey(date, granularity);
     const b = baselineByMonth.get(monthOf(date));
-    const bucket = buckets.get(key) ?? { actual: 0, low: 0, mid: 0, high: 0 };
-    bucket.actual += totalKwh;
+    const bucket = buckets.get(key) ?? { actual: 0, low: 0, mid: 0, high: 0, hasData: false };
+    if (totalKwh !== null) {
+      bucket.actual += totalKwh;
+      bucket.hasData = true;
+    }
     bucket.low += b?.expectedDailyKwhLow ?? 0;
     bucket.mid += b?.expectedDailyKwhMid ?? 0;
     bucket.high += b?.expectedDailyKwhHigh ?? 0;
@@ -80,7 +86,10 @@ export function buildTrendData(
     .map(([key, v]) => ({
       label: labelFor(key, granularity),
       date: key,
-      actualKwh: round2(v.actual),
+      // A bucket with zero real days (every day in it explicitly marked "no
+      // reading", or truly untouched) reports null rather than 0, so the
+      // chart shows a break instead of implying confirmed zero generation.
+      actualKwh: v.hasData ? round2(v.actual) : null,
       expectedLowKwh: round2(v.low),
       expectedMidKwh: round2(v.mid),
       expectedHighKwh: round2(v.high),
@@ -92,24 +101,31 @@ function round2(n: number): number {
 }
 
 /**
- * Fills in zero-kWh entries for any day with no reading between fromDate and
- * toDate (inclusive), so gaps show honestly as dips rather than being
- * silently skipped over in the chart.
+ * Fills in an entry for every day between fromDate and toDate (inclusive),
+ * summing whatever real (non-null) kWh values exist per day -- multiple
+ * inverters can contribute to the same date, and a "no reading" entry
+ * contributes null rather than 0. A day with zero real values (nothing
+ * logged, or every inverter explicitly marked "no reading") comes out as
+ * null so the chart can show an honest break instead of a fabricated dip
+ * to zero.
  */
 export function densifyDailyTotals(
-  readings: { date: string; kwh: number }[],
+  readings: { date: string; kwh: number | null }[],
   fromDate: string,
   toDate: string,
 ): DailyReadingTotal[] {
   const totals = new Map<string, number>();
+  const hasData = new Set<string>();
   for (const r of readings) {
+    if (r.kwh === null) continue;
     totals.set(r.date, (totals.get(r.date) ?? 0) + r.kwh);
+    hasData.add(r.date);
   }
 
   const result: DailyReadingTotal[] = [];
   let d = fromDate;
   while (d <= toDate) {
-    result.push({ date: d, totalKwh: round2(totals.get(d) ?? 0) });
+    result.push({ date: d, totalKwh: hasData.has(d) ? round2(totals.get(d)!) : null });
     d = addDays(d, 1);
   }
   return result;

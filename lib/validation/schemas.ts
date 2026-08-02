@@ -53,21 +53,36 @@ export const setupSchema = z.object({
 export type SetupFormValues = z.input<typeof setupSchema>;
 export type SetupInput = z.output<typeof setupSchema>;
 
-export const readingEntrySchema = z.object({
-  inverterId: z.uuid(),
-  // Blank fields coerce to NaN rather than throwing, so we can surface a
-  // friendly "required" message instead of a raw zod coercion error.
-  dailyKwh: z.preprocess(
-    (v) => (v === "" ? undefined : v),
-    z.coerce.number({ error: "Required" }).min(0, "Can't be negative").max(1_000_000),
-  ),
-  cumulativeMwh: z.preprocess(
-    (v) => (v === "" ? undefined : v),
-    z.coerce.number({ error: "Required" }).min(0, "Can't be negative"),
-  ),
-  isReset: z.boolean().default(false),
-  confirmMismatch: z.boolean().default(false),
-});
+export const readingEntrySchema = z
+  .object({
+    inverterId: z.uuid(),
+    // True when the user explicitly marks a day as having no reading to log
+    // (inverter was off, nobody visited site, etc.) instead of leaving the
+    // fields blank forever or typing a fabricated 0 -- kept distinct so
+    // totals/trends can tell "no data" apart from "measured zero".
+    noReading: z.boolean().default(false),
+    // Blank fields coerce to undefined rather than throwing, so we can
+    // surface a friendly "required" message instead of a raw zod coercion
+    // error -- and so they're valid to omit entirely when noReading is set.
+    dailyKwh: z.preprocess(
+      (v) => (v === "" ? undefined : v),
+      z.coerce.number().min(0, "Can't be negative").max(1_000_000).optional(),
+    ),
+    cumulativeMwh: z.preprocess(
+      (v) => (v === "" ? undefined : v),
+      z.coerce.number().min(0, "Can't be negative").optional(),
+    ),
+    isReset: z.boolean().default(false),
+    confirmMismatch: z.boolean().default(false),
+  })
+  .refine((data) => data.noReading || data.dailyKwh !== undefined, {
+    message: "Required",
+    path: ["dailyKwh"],
+  })
+  .refine((data) => data.noReading || data.cumulativeMwh !== undefined, {
+    message: "Required",
+    path: ["cumulativeMwh"],
+  });
 export type ReadingEntryInput = z.output<typeof readingEntrySchema>;
 
 export const dailyLogSchema = z.object({
