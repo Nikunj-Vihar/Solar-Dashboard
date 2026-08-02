@@ -41,7 +41,6 @@ const defaultValues: SetupFormValues = {
     name: `Inverter ${i + 1}`,
     manufacturer: "",
     model: "",
-    ratedCapacityKw: 0,
     dcCapacityKwp: 0,
     installDate: "",
   })),
@@ -52,7 +51,6 @@ function blankInverter(n: number) {
     name: `Inverter ${n}`,
     manufacturer: "",
     model: "",
-    ratedCapacityKw: 0,
     dcCapacityKwp: 0,
     installDate: "",
   };
@@ -88,11 +86,7 @@ export function SetupWizard() {
       step === 0
         ? ["site.name", "site.latitude", "site.longitude"]
         : inverterFields
-            .map((_, i) => [
-              `inverters.${i}.name`,
-              `inverters.${i}.ratedCapacityKw`,
-              `inverters.${i}.dcCapacityKwp`,
-            ])
+            .map((_, i) => [`inverters.${i}.name`, `inverters.${i}.dcCapacityKwp`])
             .flat();
 
     const valid = await trigger(fields as never);
@@ -297,35 +291,19 @@ export function SetupWizard() {
                       <Input id={`inv-${i}-model`} {...register(`inverters.${i}.model`)} />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor={`inv-${i}-rated`}>Rated capacity (kW)</Label>
-                      <Input
-                        id={`inv-${i}-rated`}
-                        type="number"
-                        step="0.01"
-                        {...register(`inverters.${i}.ratedCapacityKw`)}
-                      />
-                      {errors.inverters?.[i]?.ratedCapacityKw && (
-                        <p className="text-sm text-destructive">
-                          {errors.inverters[i]?.ratedCapacityKw?.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`inv-${i}-dc`}>DC capacity (kWp)</Label>
-                      <Input
-                        id={`inv-${i}-dc`}
-                        type="number"
-                        step="0.01"
-                        {...register(`inverters.${i}.dcCapacityKwp`)}
-                      />
-                      {errors.inverters?.[i]?.dcCapacityKwp && (
-                        <p className="text-sm text-destructive">
-                          {errors.inverters[i]?.dcCapacityKwp?.message}
-                        </p>
-                      )}
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`inv-${i}-dc`}>DC capacity (kWp)</Label>
+                    <Input
+                      id={`inv-${i}-dc`}
+                      type="number"
+                      step="0.01"
+                      {...register(`inverters.${i}.dcCapacityKwp`)}
+                    />
+                    {errors.inverters?.[i]?.dcCapacityKwp && (
+                      <p className="text-sm text-destructive">
+                        {errors.inverters[i]?.dcCapacityKwp?.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor={`inv-${i}-install`}>Install date (optional)</Label>

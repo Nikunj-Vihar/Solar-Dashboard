@@ -23,12 +23,14 @@ export default async function SettingsPage() {
     .map((inv) => ({
       id: inv.id,
       name: inv.name,
-      ratedCapacityKw: inv.rated_capacity_kw,
+      manufacturer: inv.manufacturer,
+      model: inv.model,
       dcCapacityKwp: inv.dc_capacity_kwp,
+      installDate: inv.install_date,
     }));
 
   return (
-    <div className="max-w-lg space-y-4">
+    <div className="mx-auto max-w-lg space-y-4">
       <h1 className="text-2xl font-semibold">Settings</h1>
       <PublicShareCard initialIsPublic={site.is_public} initialSlug={site.public_share_slug} />
       <InvertersCard initialInverters={activeInverters} />

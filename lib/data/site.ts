@@ -35,7 +35,10 @@ export type SiteWithInverters = {
     name: string;
     manufacturer: string | null;
     model: string | null;
-    rated_capacity_kw: number;
+    // Historical column -- no longer collected (kWp alone is what's used
+    // throughout the app), kept nullable rather than dropped so previously
+    // entered values aren't destroyed. See migration 0009.
+    rated_capacity_kw: number | null;
     dc_capacity_kwp: number;
     install_date: string | null;
     is_active: boolean;

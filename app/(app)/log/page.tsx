@@ -37,7 +37,6 @@ export default async function LogPage({
       return {
         id: inv.id,
         name: inv.name,
-        ratedCapacityKw: inv.rated_capacity_kw,
         existing: existing
           ? {
               dailyKwh: existing.daily_kwh,

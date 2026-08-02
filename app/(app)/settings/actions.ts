@@ -62,7 +62,7 @@ async function getOwnedSiteId(userId: string, supabase: Awaited<ReturnType<typeo
 }
 
 export type AddInverterResult =
-  | { ok: true; inverter: { id: string; name: string; ratedCapacityKw: number; dcCapacityKwp: number } }
+  | { ok: true; inverter: { id: string; name: string; dcCapacityKwp: number } }
   | { ok: false; error: string };
 
 export async function addInverter(input: InverterInput): Promise<AddInverterResult> {
@@ -82,7 +82,7 @@ export async function addInverter(input: InverterInput): Promise<AddInverterResu
     return { ok: false, error: "Site not found." };
   }
 
-  const { name, manufacturer, model, ratedCapacityKw, dcCapacityKwp, installDate } = parsed.data;
+  const { name, manufacturer, model, dcCapacityKwp, installDate } = parsed.data;
   const { data: inserted, error } = await supabase
     .from("inverters")
     .insert({
@@ -90,7 +90,6 @@ export async function addInverter(input: InverterInput): Promise<AddInverterResu
       name,
       manufacturer: manufacturer || null,
       model: model || null,
-      rated_capacity_kw: ratedCapacityKw,
       dc_capacity_kwp: dcCapacityKwp,
       install_date: installDate || null,
     })
@@ -103,7 +102,49 @@ export async function addInverter(input: InverterInput): Promise<AddInverterResu
   revalidatePath("/settings");
   revalidatePath("/log");
   revalidatePath("/dashboard");
-  return { ok: true, inverter: { id: inserted.id, name, ratedCapacityKw, dcCapacityKwp } };
+  return { ok: true, inverter: { id: inserted.id, name, dcCapacityKwp } };
+}
+
+export async function updateInverter(
+  inverterId: string,
+  input: InverterInput,
+): Promise<ActionResult> {
+  const user = await getAuthedUser();
+  if (!user) {
+    return { ok: false, error: "You must be signed in." };
+  }
+
+  const parsed = inverterSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid inverter details." };
+  }
+
+  const supabase = await createClient();
+  const siteId = await getOwnedSiteId(user.id, supabase);
+  if (!siteId) {
+    return { ok: false, error: "Site not found." };
+  }
+
+  const { name, manufacturer, model, dcCapacityKwp, installDate } = parsed.data;
+  const { error } = await supabase
+    .from("inverters")
+    .update({
+      name,
+      manufacturer: manufacturer || null,
+      model: model || null,
+      dc_capacity_kwp: dcCapacityKwp,
+      install_date: installDate || null,
+    })
+    .eq("id", inverterId)
+    .eq("site_id", siteId);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/log");
+  revalidatePath("/dashboard");
+  return { ok: true };
 }
 
 export async function removeInverter(inverterId: string): Promise<ActionResult> {

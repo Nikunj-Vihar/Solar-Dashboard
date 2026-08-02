@@ -44,7 +44,7 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
 
   const { data: inverters } = await supabase
     .from("inverters")
-    .select("id, name, rated_capacity_kw")
+    .select("id, name, dc_capacity_kwp")
     .eq("site_id", site.id);
   if (!inverters || inverters.length === 0) {
     return { ok: false, error: "No inverters found for this site." };
@@ -75,10 +75,10 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
   for (const r of readings) {
     const inverter = inverterById.get(r.inverterId)!;
 
-    if (exceedsPhysicalCapacity(r.dailyKwh, inverter.rated_capacity_kw)) {
+    if (exceedsPhysicalCapacity(r.dailyKwh, inverter.dc_capacity_kwp)) {
       return {
         ok: false,
-        error: `${inverter.name}: ${r.dailyKwh} kWh is above what its rated capacity (${inverter.rated_capacity_kw} kW) could plausibly produce in a day — check for a typo.`,
+        error: `${inverter.name}: ${r.dailyKwh} kWh is above what its DC capacity (${inverter.dc_capacity_kwp} kWp) could plausibly produce in a day — check for a typo.`,
       };
     }
 

@@ -62,7 +62,6 @@ export async function completeSetup(input: SetupInput): Promise<CompleteSetupRes
         name: inv.name,
         manufacturer: inv.manufacturer || null,
         model: inv.model || null,
-        rated_capacity_kw: inv.ratedCapacityKw,
         dc_capacity_kwp: inv.dcCapacityKwp,
         install_date: inv.installDate || null,
       })),

@@ -115,7 +115,7 @@ describe("checkCumulativeAndCrossCheck", () => {
 });
 
 describe("exceedsPhysicalCapacity", () => {
-  it("allows a plausible day within rated capacity", () => {
+  it("allows a plausible day within DC capacity", () => {
     expect(exceedsPhysicalCapacity(30, 5.5)).toBe(false); // ~5.5h full-sun-equivalent, plausible
   });
 

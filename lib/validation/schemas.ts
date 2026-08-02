@@ -34,7 +34,6 @@ export const inverterSchema = z.object({
   name: z.string().min(1, "Inverter name is required").max(100),
   manufacturer: z.string().max(100).optional().or(z.literal("")),
   model: z.string().max(100).optional().or(z.literal("")),
-  ratedCapacityKw: z.coerce.number().positive("Must be greater than 0").max(1000),
   dcCapacityKwp: z.coerce.number().positive("Must be greater than 0").max(1000),
   installDate: z.string().optional().or(z.literal("")),
 });
