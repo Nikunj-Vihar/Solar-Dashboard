@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import { Sun, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getDemoDashboardData, DEMO_SITE } from "@/lib/demo-data";
+import { getDemoDashboardData, DEMO_SITE, DEMO_INVERTERS } from "@/lib/demo-data";
 import { computeHealthStatus } from "@/lib/calc/health";
 import { SummaryRow } from "@/app/(app)/dashboard/SummaryRow";
 import { InverterBarChart } from "@/app/(app)/dashboard/InverterBarChart";
 import { TrendChart } from "@/app/(app)/dashboard/TrendChart";
 import { ImpactFigures } from "@/app/(app)/dashboard/ImpactFigures";
-import { AlertsList } from "@/app/(app)/dashboard/AlertsList";
+import { PerformanceMetrics } from "@/app/(app)/dashboard/PerformanceMetrics";
+import { GenerationHeatmap } from "@/app/(app)/dashboard/GenerationHeatmap";
+import { LifetimeTrend } from "@/app/(app)/dashboard/LifetimeTrend";
 
 export const dynamic = "force-static";
 
@@ -27,6 +29,7 @@ export default function DemoPage() {
   const monthExpectedMidKwh = currentMonthBaseline
     ? currentMonthBaseline.expectedDailyKwhMid * dayOfMonth
     : null;
+  const totalDcCapacityKwp = DEMO_INVERTERS.reduce((sum, inv) => sum + inv.dcCapacityKwp, 0);
 
   return (
     <div className="min-h-svh bg-muted/20">
@@ -59,15 +62,23 @@ export default function DemoPage() {
           lifetimeKwh={data.lifetimeKwh}
           healthStatus={healthStatus}
         />
-        <InverterBarChart data={data.perInverterToday} />
+        <InverterBarChart today={data.perInverterToday} month={data.perInverterMonth} />
         <TrendChart readings={data.allReadings} baseline={data.baseline} today={data.today} />
-        <ImpactFigures
-          monthKwh={data.monthKwh}
-          monthExpectedMidKwh={monthExpectedMidKwh}
-          tariffRateInrPerKwh={DEMO_SITE.tariffRateInrPerKwh}
-          gridEmissionFactorKgPerKwh={DEMO_SITE.gridEmissionFactorKgPerKwh}
-        />
-        <AlertsList alerts={data.alerts} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <ImpactFigures
+            monthKwh={data.monthKwh}
+            monthExpectedMidKwh={monthExpectedMidKwh}
+            tariffRateInrPerKwh={DEMO_SITE.tariffRateInrPerKwh}
+            gridEmissionFactorKgPerKwh={DEMO_SITE.gridEmissionFactorKgPerKwh}
+          />
+          <PerformanceMetrics
+            monthKwh={data.monthKwh}
+            totalDcCapacityKwp={totalDcCapacityKwp}
+            dayOfMonth={dayOfMonth}
+          />
+        </div>
+        <GenerationHeatmap readings={data.allReadings} today={data.today} />
+        <LifetimeTrend readings={data.allReadings} today={data.today} />
       </main>
     </div>
   );

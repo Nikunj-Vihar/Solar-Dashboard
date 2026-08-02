@@ -1,7 +1,16 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { todayInTimezone } from "@/lib/date";
+import { todayInTimezone, addDays } from "@/lib/date";
 import type { SiteWithInverters } from "./site";
+
+// baseline_deviation is a per-day event log by design (one row per date a
+// site's total deviated from its baseline), not an ongoing condition --
+// unlike underperformance/missing_reading, nothing ever marks an old day's
+// deviation "resolved" once that day has passed. Left unbounded, health
+// status would get stuck on a single bad day from months ago forever. Only
+// count it toward "current" health within a short recent window; the other
+// alert types self-resolve correctly on their own and stay unbounded.
+const RECENT_BASELINE_DEVIATION_DAYS = 3;
 
 export type DashboardData = {
   today: string;
@@ -9,6 +18,7 @@ export type DashboardData = {
   monthKwh: number;
   lifetimeKwh: number;
   perInverterToday: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
+  perInverterMonth: { inverterId: string; name: string; kwh: number }[];
   allReadings: { date: string; kwh: number | null }[];
   baseline: {
     month: number;
@@ -46,6 +56,9 @@ export async function getDashboardData(site: SiteWithInverters): Promise<Dashboa
       .select("id, message, severity, inverter_id, reading_date")
       .eq("site_id", site.id)
       .eq("is_resolved", false)
+      .or(
+        `alert_type.neq.baseline_deviation,reading_date.gte.${addDays(today, -RECENT_BASELINE_DEVIATION_DAYS)}`,
+      )
       .order("created_at", { ascending: false }),
   ]);
 
@@ -69,12 +82,21 @@ export async function getDashboardData(site: SiteWithInverters): Promise<Dashboa
       };
     });
 
+  const perInverterMonth = site.inverters
+    .filter((inv) => inv.is_active)
+    .map((inv) => ({
+      inverterId: inv.id,
+      name: inv.name,
+      kwh: sum(realKwh(monthRows.filter((r) => r.inverter_id === inv.id))),
+    }));
+
   return {
     today,
     todayKwh: sum(realKwh(todayRows)),
     monthKwh: sum(realKwh(monthRows)),
     lifetimeKwh: sum(realKwh(rows)),
     perInverterToday,
+    perInverterMonth,
     allReadings: rows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh })),
     baseline: (baselineRows ?? []).map((b) => ({
       month: b.month,

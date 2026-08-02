@@ -6,7 +6,9 @@ import { SummaryRow } from "./SummaryRow";
 import { InverterBarChart } from "./InverterBarChart";
 import { TrendChart } from "./TrendChart";
 import { ImpactFigures } from "./ImpactFigures";
-import { AlertsList } from "./AlertsList";
+import { PerformanceMetrics } from "./PerformanceMetrics";
+import { GenerationHeatmap } from "./GenerationHeatmap";
+import { LifetimeTrend } from "./LifetimeTrend";
 
 export default async function DashboardPage() {
   const site = await getCurrentSite();
@@ -23,6 +25,9 @@ export default async function DashboardPage() {
   const monthExpectedMidKwh = currentMonthBaseline
     ? currentMonthBaseline.expectedDailyKwhMid * dayOfMonth
     : null;
+  const totalDcCapacityKwp = site.inverters
+    .filter((inv) => inv.is_active)
+    .reduce((sum, inv) => sum + inv.dc_capacity_kwp, 0);
 
   return (
     <div className="space-y-4">
@@ -35,18 +40,27 @@ export default async function DashboardPage() {
         healthStatus={healthStatus}
       />
 
-      <InverterBarChart data={data.perInverterToday} />
+      <InverterBarChart today={data.perInverterToday} month={data.perInverterMonth} />
 
       <TrendChart readings={data.allReadings} baseline={data.baseline} today={data.today} />
 
-      <ImpactFigures
-        monthKwh={data.monthKwh}
-        monthExpectedMidKwh={monthExpectedMidKwh}
-        tariffRateInrPerKwh={site.tariff_rate_inr_per_kwh}
-        gridEmissionFactorKgPerKwh={site.grid_emission_factor_kg_per_kwh}
-      />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ImpactFigures
+          monthKwh={data.monthKwh}
+          monthExpectedMidKwh={monthExpectedMidKwh}
+          tariffRateInrPerKwh={site.tariff_rate_inr_per_kwh}
+          gridEmissionFactorKgPerKwh={site.grid_emission_factor_kg_per_kwh}
+        />
+        <PerformanceMetrics
+          monthKwh={data.monthKwh}
+          totalDcCapacityKwp={totalDcCapacityKwp}
+          dayOfMonth={dayOfMonth}
+        />
+      </div>
 
-      <AlertsList alerts={data.alerts} />
+      <GenerationHeatmap readings={data.allReadings} today={data.today} />
+
+      <LifetimeTrend readings={data.allReadings} today={data.today} />
     </div>
   );
 }

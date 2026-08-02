@@ -21,7 +21,7 @@ export function ImpactFigures({
     monthExpectedMidKwh !== null ? computeVsBaselinePercent(monthKwh, monthExpectedMidKwh) : null;
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <>
       {rupeeSaved !== null && (
         <Card>
           <CardContent className="pt-6">
@@ -75,6 +75,6 @@ export function ImpactFigures({
           </p>
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }

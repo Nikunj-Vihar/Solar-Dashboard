@@ -333,4 +333,52 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
 
     await cleanupSite(site3.userId);
   });
+
+  it("get_public_dashboard doesn't get stuck on a stale baseline_deviation alert", async () => {
+    const site6 = await seedSite("public-health");
+    const slug = `public-health-${Date.now()}`;
+    const { error: publicErr } = await admin
+      .from("sites")
+      .update({ is_public: true, public_share_slug: slug })
+      .eq("id", site6.siteId);
+    if (publicErr) throw publicErr;
+
+    // A baseline_deviation alert from 10 days ago -- an old, never-"resolved"
+    // event, not a current condition -- must not keep health status stuck.
+    const staleDate = ymd(daysAgo(10));
+    const { error: insertErr } = await admin.from("alerts").insert({
+      site_id: site6.siteId,
+      alert_type: "baseline_deviation",
+      severity: "watch",
+      message: "stale deviation",
+      reading_date: staleDate,
+      is_resolved: false,
+    });
+    if (insertErr) throw insertErr;
+
+    const { data: staleResult, error: staleErr } = await admin.rpc("get_public_dashboard", {
+      p_slug: slug,
+    });
+    if (staleErr) throw staleErr;
+    expect(staleResult.health_status).toBe("Good");
+
+    // A baseline_deviation alert from today should still count as current.
+    const { error: recentErr } = await admin.from("alerts").insert({
+      site_id: site6.siteId,
+      alert_type: "baseline_deviation",
+      severity: "watch",
+      message: "recent deviation",
+      reading_date: ymd(daysAgo(0)),
+      is_resolved: false,
+    });
+    if (recentErr) throw recentErr;
+
+    const { data: recentResult, error: recentFetchErr } = await admin.rpc("get_public_dashboard", {
+      p_slug: slug,
+    });
+    if (recentFetchErr) throw recentFetchErr;
+    expect(recentResult.health_status).toBe("Watch");
+
+    await cleanupSite(site6.userId);
+  });
 });

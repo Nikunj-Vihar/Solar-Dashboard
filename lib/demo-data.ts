@@ -35,6 +35,7 @@ export type DemoDashboardData = {
   monthKwh: number;
   lifetimeKwh: number;
   perInverterToday: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
+  perInverterMonth: { inverterId: string; name: string; kwh: number }[];
   allReadings: { date: string; kwh: number }[];
   baseline: typeof DEMO_BASELINE;
   alerts: {
@@ -98,6 +99,12 @@ export function getDemoDashboardData(): DemoDashboardData {
     noReading: false, // demo data never has an explicit no-reading gap
   }));
 
+  const perInverterMonth = DEMO_INVERTERS.map((inv) => ({
+    inverterId: inv.id,
+    name: inv.name,
+    kwh: round2(sum(monthRows.filter((r) => r.inverterId === inv.id).map((r) => r.kwh))),
+  }));
+
   const lastMissingDay = addDays(today, -Math.min(...MISSING_READING_GAP_DAYS_AGO));
 
   return {
@@ -106,6 +113,7 @@ export function getDemoDashboardData(): DemoDashboardData {
     monthKwh: round2(sum(monthRows.map((r) => r.kwh))),
     lifetimeKwh: round2(sum(readings.map((r) => r.kwh))),
     perInverterToday,
+    perInverterMonth,
     allReadings: readings.map((r) => ({ date: r.date, kwh: r.kwh })),
     baseline: DEMO_BASELINE,
     alerts: [

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -12,23 +13,43 @@ import {
 } from "recharts";
 import { AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { findUnderperformingInverter } from "@/lib/calc/health";
 import { formatKwh } from "@/lib/format";
 
+type Period = "today" | "month";
+
 export function InverterBarChart({
-  data,
+  today,
+  month,
 }: {
-  data: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
+  today: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
+  month: { inverterId: string; name: string; kwh: number }[];
 }) {
-  // An inverter explicitly marked "no reading" today has no real number to
-  // compare -- excluding it here means it's never flagged as the
-  // underperformer just for having nothing logged yet.
-  const underperformingId = findUnderperformingInverter(data.filter((d) => !d.noReading));
+  const [period, setPeriod] = useState<Period>("today");
+  const data = period === "today" ? today : month;
+
+  // The "meaningfully behind the others" comparison is only a same-day
+  // fault signal (spec §5's reasoning): a lagging month total is just as
+  // likely to mean "added partway through the month" as "something's
+  // wrong", so it's only computed/shown for the today view. An inverter
+  // explicitly marked "no reading" today has no real number to compare --
+  // excluding it means it's never flagged just for having nothing logged.
+  const underperformingId =
+    period === "today"
+      ? findUnderperformingInverter(today.filter((d) => !d.noReading))
+      : null;
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Today by inverter</CardTitle>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-base">By inverter</CardTitle>
+        <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+          <TabsList>
+            <TabsTrigger value="today">Today</TabsTrigger>
+            <TabsTrigger value="month">This month</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </CardHeader>
       <CardContent>
         {underperformingId && (

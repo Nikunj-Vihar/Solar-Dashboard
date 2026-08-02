@@ -83,9 +83,10 @@ export function SummaryRow({
           <p className="flex items-center gap-1 text-sm text-muted-foreground">
             Health status
             <InfoTooltip>
-              Good: no active alerts. Watch: one or more inverters are underperforming versus
-              their own recent average, or total generation is off from the expected baseline.
-              Needs attention: a flagged issue hasn&apos;t been resolved — check the alerts below.
+              Good: nothing flagged. Watch: one or more inverters are underperforming versus
+              their own recent average, a reading hasn&apos;t been logged in a couple of days, or
+              total generation was off from the expected baseline in the last few days. Needs
+              attention: a flagged issue hasn&apos;t cleared up yet.
             </InfoTooltip>
           </p>
           <p className={`mt-1 flex items-center gap-1.5 text-2xl font-semibold ${health.className}`}>
