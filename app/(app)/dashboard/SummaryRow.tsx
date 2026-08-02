@@ -48,13 +48,15 @@ function StatTile({
 }
 
 export function SummaryRow({
-  todayKwh,
-  monthKwh,
+  rangeKwh,
+  rangeAvgPerDayKwh,
+  rangeLabel,
   lifetimeKwh,
   healthStatus,
 }: {
-  todayKwh: number;
-  monthKwh: number;
+  rangeKwh: number;
+  rangeAvgPerDayKwh: number;
+  rangeLabel: string;
   lifetimeKwh: number;
   healthStatus: HealthStatus;
 }) {
@@ -64,19 +66,19 @@ export function SummaryRow({
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <StatTile
-        label="Today"
-        value={formatKwh(todayKwh)}
-        info="Total generation across all active inverters so far today."
+        label="Generated"
+        value={formatKwh(rangeKwh)}
+        info={`Total generation across all active inverters for the selected period (${rangeLabel}).`}
       />
       <StatTile
-        label="This month"
-        value={formatKwh(monthKwh)}
-        info="Total generation across all active inverters this calendar month."
+        label="Avg / day"
+        value={formatKwh(rangeAvgPerDayKwh)}
+        info="Selected-period total divided by the number of calendar days in that period."
       />
       <StatTile
         label="Lifetime"
         value={formatKwh(lifetimeKwh)}
-        info="Every reading ever logged for this site, added up."
+        info="Every reading ever logged for this site, added up -- not affected by the date filter above."
       />
       <Card>
         <CardContent className="pt-6">
@@ -86,7 +88,8 @@ export function SummaryRow({
               Good: nothing flagged. Watch: one or more inverters are underperforming versus
               their own recent average, a reading hasn&apos;t been logged in a couple of days, or
               total generation was off from the expected baseline in the last few days. Needs
-              attention: a flagged issue hasn&apos;t cleared up yet.
+              attention: a flagged issue hasn&apos;t cleared up yet. Always reflects current
+              condition, regardless of the date filter above.
             </InfoTooltip>
           </p>
           <p className={`mt-1 flex items-center gap-1.5 text-2xl font-semibold ${health.className}`}>

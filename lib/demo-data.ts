@@ -7,6 +7,7 @@
  * or the Supabase client.
  */
 import { todayInTimezone, addDays } from "@/lib/date";
+import { computeRangeSummary, computeRangeExpectedMidKwh } from "@/lib/calc/range";
 
 export const DEMO_SITE = {
   name: "Sunnyvale Rooftop Array",
@@ -34,8 +35,14 @@ export type DemoDashboardData = {
   todayKwh: number;
   monthKwh: number;
   lifetimeKwh: number;
-  perInverterToday: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
-  perInverterMonth: { inverterId: string; name: string; kwh: number }[];
+  // The demo page freezes on "today" (matching the real dashboard's default
+  // range before a visitor picks anything), so these are the same shape the
+  // real getDashboardData returns for its range-driven fields.
+  rangeKwh: number;
+  rangeDaysWithData: number;
+  rangeTotalDays: number;
+  rangeExpectedMidKwh: number | null;
+  perInverterRange: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
   allReadings: { date: string; kwh: number }[];
   baseline: typeof DEMO_BASELINE;
   alerts: {
@@ -92,18 +99,16 @@ export function getDemoDashboardData(): DemoDashboardData {
   const todayRows = readings.filter((r) => r.date === today);
   const monthRows = readings.filter((r) => r.date.startsWith(currentMonth));
 
-  const perInverterToday = DEMO_INVERTERS.map((inv) => ({
+  // Frozen on "today" -- same default range the real dashboard starts on.
+  const perInverterRange = DEMO_INVERTERS.map((inv) => ({
     inverterId: inv.id,
     name: inv.name,
     kwh: todayRows.find((r) => r.inverterId === inv.id)?.kwh ?? 0,
     noReading: false, // demo data never has an explicit no-reading gap
   }));
 
-  const perInverterMonth = DEMO_INVERTERS.map((inv) => ({
-    inverterId: inv.id,
-    name: inv.name,
-    kwh: round2(sum(monthRows.filter((r) => r.inverterId === inv.id).map((r) => r.kwh))),
-  }));
+  const allReadings = readings.map((r) => ({ date: r.date, kwh: r.kwh }));
+  const rangeSummary = computeRangeSummary(allReadings, today, today);
 
   const lastMissingDay = addDays(today, -Math.min(...MISSING_READING_GAP_DAYS_AGO));
 
@@ -112,9 +117,12 @@ export function getDemoDashboardData(): DemoDashboardData {
     todayKwh: round2(sum(todayRows.map((r) => r.kwh))),
     monthKwh: round2(sum(monthRows.map((r) => r.kwh))),
     lifetimeKwh: round2(sum(readings.map((r) => r.kwh))),
-    perInverterToday,
-    perInverterMonth,
-    allReadings: readings.map((r) => ({ date: r.date, kwh: r.kwh })),
+    rangeKwh: rangeSummary.actualKwh,
+    rangeDaysWithData: rangeSummary.daysWithData,
+    rangeTotalDays: rangeSummary.totalDays,
+    rangeExpectedMidKwh: computeRangeExpectedMidKwh(today, today, DEMO_BASELINE),
+    perInverterRange,
+    allReadings,
     baseline: DEMO_BASELINE,
     alerts: [
       {

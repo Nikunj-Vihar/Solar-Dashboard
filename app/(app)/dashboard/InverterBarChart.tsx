@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -13,43 +12,31 @@ import {
 } from "recharts";
 import { AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { findUnderperformingInverter } from "@/lib/calc/health";
 import { formatKwh } from "@/lib/format";
 
-type Period = "today" | "month";
-
 export function InverterBarChart({
-  today,
-  month,
+  data,
+  singleDay,
 }: {
-  today: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
-  month: { inverterId: string; name: string; kwh: number }[];
+  data: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
+  singleDay: boolean;
 }) {
-  const [period, setPeriod] = useState<Period>("today");
-  const data = period === "today" ? today : month;
-
   // The "meaningfully behind the others" comparison is only a same-day
-  // fault signal (spec §5's reasoning): a lagging month total is just as
-  // likely to mean "added partway through the month" as "something's
-  // wrong", so it's only computed/shown for the today view. An inverter
-  // explicitly marked "no reading" today has no real number to compare --
-  // excluding it means it's never flagged just for having nothing logged.
-  const underperformingId =
-    period === "today"
-      ? findUnderperformingInverter(today.filter((d) => !d.noReading))
-      : null;
+  // fault signal (spec §5's reasoning): a lagging multi-day total is just as
+  // likely to mean "added partway through the period" as "something's
+  // wrong", so it's only computed/shown when the selected range is a single
+  // day. An inverter explicitly marked "no reading" that day has no real
+  // number to compare -- excluding it means it's never flagged just for
+  // having nothing logged.
+  const underperformingId = singleDay
+    ? findUnderperformingInverter(data.filter((d) => !d.noReading))
+    : null;
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0">
+      <CardHeader>
         <CardTitle className="text-base">By inverter</CardTitle>
-        <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <TabsList>
-            <TabsTrigger value="today">Today</TabsTrigger>
-            <TabsTrigger value="month">This month</TabsTrigger>
-          </TabsList>
-        </Tabs>
       </CardHeader>
       <CardContent>
         {underperformingId && (
@@ -57,7 +44,7 @@ export function InverterBarChart({
             <AlertTriangle className="size-4 shrink-0" />
             <span>
               {data.find((d) => d.inverterId === underperformingId)?.name} is generating
-              noticeably less than the others today.
+              noticeably less than the others that day.
             </span>
           </div>
         )}

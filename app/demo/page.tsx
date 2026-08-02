@@ -3,6 +3,7 @@ import { Sun, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getDemoDashboardData, DEMO_SITE, DEMO_INVERTERS } from "@/lib/demo-data";
 import { computeHealthStatus } from "@/lib/calc/health";
+import { formatRangeLabel } from "@/lib/format";
 import { SummaryRow } from "@/app/(app)/dashboard/SummaryRow";
 import { InverterBarChart } from "@/app/(app)/dashboard/InverterBarChart";
 import { TrendChart } from "@/app/(app)/dashboard/TrendChart";
@@ -22,14 +23,8 @@ export const metadata: Metadata = {
 export default function DemoPage() {
   const data = getDemoDashboardData();
   const healthStatus = computeHealthStatus(data.alerts);
-
-  const currentMonthNumber = Number(data.today.slice(5, 7));
-  const dayOfMonth = Number(data.today.slice(8, 10));
-  const currentMonthBaseline = data.baseline.find((b) => b.month === currentMonthNumber);
-  const monthExpectedMidKwh = currentMonthBaseline
-    ? currentMonthBaseline.expectedDailyKwhMid * dayOfMonth
-    : null;
   const totalDcCapacityKwp = DEMO_INVERTERS.reduce((sum, inv) => sum + inv.dcCapacityKwp, 0);
+  const rangeLabel = formatRangeLabel(data.today, data.today);
 
   return (
     <div className="min-h-svh bg-muted/20">
@@ -57,24 +52,26 @@ export default function DemoPage() {
 
       <main className="mx-auto max-w-5xl space-y-4 p-4">
         <SummaryRow
-          todayKwh={data.todayKwh}
-          monthKwh={data.monthKwh}
+          rangeKwh={data.rangeKwh}
+          rangeAvgPerDayKwh={data.rangeKwh}
+          rangeLabel={rangeLabel}
           lifetimeKwh={data.lifetimeKwh}
           healthStatus={healthStatus}
         />
-        <InverterBarChart today={data.perInverterToday} month={data.perInverterMonth} />
+        <InverterBarChart data={data.perInverterRange} singleDay />
         <TrendChart readings={data.allReadings} baseline={data.baseline} today={data.today} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ImpactFigures
-            monthKwh={data.monthKwh}
-            monthExpectedMidKwh={monthExpectedMidKwh}
+            rangeKwh={data.rangeKwh}
+            rangeExpectedMidKwh={data.rangeExpectedMidKwh}
+            rangeLabel={rangeLabel}
             tariffRateInrPerKwh={DEMO_SITE.tariffRateInrPerKwh}
             gridEmissionFactorKgPerKwh={DEMO_SITE.gridEmissionFactorKgPerKwh}
           />
           <PerformanceMetrics
-            monthKwh={data.monthKwh}
+            rangeKwh={data.rangeKwh}
             totalDcCapacityKwp={totalDcCapacityKwp}
-            dayOfMonth={dayOfMonth}
+            rangeDays={data.rangeTotalDays}
           />
         </div>
         <GenerationHeatmap readings={data.allReadings} today={data.today} />

@@ -5,20 +5,22 @@ import { computeRupeeSaved, computeCo2OffsetKg, computeVsBaselinePercent } from 
 import { formatInr, formatKwh, formatPercent } from "@/lib/format";
 
 export function ImpactFigures({
-  monthKwh,
-  monthExpectedMidKwh,
+  rangeKwh,
+  rangeExpectedMidKwh,
+  rangeLabel,
   tariffRateInrPerKwh,
   gridEmissionFactorKgPerKwh,
 }: {
-  monthKwh: number;
-  monthExpectedMidKwh: number | null;
+  rangeKwh: number;
+  rangeExpectedMidKwh: number | null;
+  rangeLabel: string;
   tariffRateInrPerKwh: number | null;
   gridEmissionFactorKgPerKwh: number;
 }) {
-  const rupeeSaved = computeRupeeSaved(monthKwh, tariffRateInrPerKwh);
-  const co2OffsetKg = computeCo2OffsetKg(monthKwh, gridEmissionFactorKgPerKwh);
+  const rupeeSaved = computeRupeeSaved(rangeKwh, tariffRateInrPerKwh);
+  const co2OffsetKg = computeCo2OffsetKg(rangeKwh, gridEmissionFactorKgPerKwh);
   const vsBaseline =
-    monthExpectedMidKwh !== null ? computeVsBaselinePercent(monthKwh, monthExpectedMidKwh) : null;
+    rangeExpectedMidKwh !== null ? computeVsBaselinePercent(rangeKwh, rangeExpectedMidKwh) : null;
 
   return (
     <>
@@ -26,10 +28,11 @@ export function ImpactFigures({
         <Card>
           <CardContent className="pt-6">
             <p className="flex items-center gap-1 text-sm text-muted-foreground">
-              Estimated savings this month
+              Estimated savings
               <InfoTooltip>
                 <p>
-                  {formatKwh(monthKwh)} generated this month × your configured tariff rate of{" "}
+                  {formatKwh(rangeKwh)} generated in the selected period ({rangeLabel}) × your
+                  configured tariff rate of{" "}
                   {tariffRateInrPerKwh !== null ? `₹${tariffRateInrPerKwh}/kWh` : ""}
                   {" = "}what that electricity would have cost from the grid. An estimate, not a
                   certified figure — change your tariff rate in Settings if it&apos;s out of date.
@@ -53,7 +56,7 @@ export function ImpactFigures({
                 ) : (
                   <TrendingDown className="size-3.5" />
                 )}
-                {formatPercent(vsBaseline, { showSign: true })} vs. expected for this month
+                {formatPercent(vsBaseline, { showSign: true })} vs. expected for {rangeLabel}
               </p>
             )}
           </CardContent>
@@ -62,12 +65,12 @@ export function ImpactFigures({
       <Card>
         <CardContent className="pt-6">
           <p className="flex items-center gap-1 text-sm text-muted-foreground">
-            Estimated CO2 offset this month
+            Estimated CO2 offset
             <InfoTooltip>
-              {formatKwh(monthKwh)} generated this month × a standard grid emission factor of{" "}
-              {gridEmissionFactorKgPerKwh} kg CO2/kWh — roughly what generating that same
-              electricity from the grid would have emitted. An approximation, not a certified
-              measurement.
+              {formatKwh(rangeKwh)} generated in the selected period ({rangeLabel}) × a standard
+              grid emission factor of {gridEmissionFactorKgPerKwh} kg CO2/kWh — roughly what
+              generating that same electricity from the grid would have emitted. An approximation,
+              not a certified measurement.
             </InfoTooltip>
           </p>
           <p className="mt-1 text-2xl font-semibold">

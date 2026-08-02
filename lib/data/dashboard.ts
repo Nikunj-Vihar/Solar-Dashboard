@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { todayInTimezone, addDays } from "@/lib/date";
+import { computeRangeSummary, computeRangeExpectedMidKwh } from "@/lib/calc/range";
 import type { SiteWithInverters } from "./site";
 
 // baseline_deviation is a per-day event log by design (one row per date a
@@ -17,8 +18,14 @@ export type DashboardData = {
   todayKwh: number;
   monthKwh: number;
   lifetimeKwh: number;
-  perInverterToday: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
-  perInverterMonth: { inverterId: string; name: string; kwh: number }[];
+  /** The resolved date range the caller asked for (defaults to today-only). */
+  range: { from: string; to: string };
+  rangeKwh: number;
+  rangeDaysWithData: number;
+  rangeTotalDays: number;
+  rangeExpectedMidKwh: number | null;
+  rangeIsSingleDay: boolean;
+  perInverterRange: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
   allReadings: { date: string; kwh: number | null }[];
   baseline: {
     month: number;
@@ -35,10 +42,14 @@ export type DashboardData = {
   }[];
 };
 
-export async function getDashboardData(site: SiteWithInverters): Promise<DashboardData> {
+export async function getDashboardData(
+  site: SiteWithInverters,
+  range?: { from: string; to: string },
+): Promise<DashboardData> {
   const supabase = await createClient();
   const today = todayInTimezone(site.timezone);
   const currentMonth = today.slice(0, 7);
+  const effectiveRange = range ?? { from: today, to: today };
 
   const [{ data: readings }, { data: baselineRows }, { data: alertRows }] = await Promise.all([
     supabase
@@ -65,45 +76,59 @@ export async function getDashboardData(site: SiteWithInverters): Promise<Dashboa
   const rows = readings ?? [];
   const todayRows = rows.filter((r) => r.reading_date === today);
   const monthRows = rows.filter((r) => r.reading_date.startsWith(currentMonth));
+  const rangeRows = rows.filter(
+    (r) => r.reading_date >= effectiveRange.from && r.reading_date <= effectiveRange.to,
+  );
   // Real (non-skipped) rows only, for the summed totals below -- a "no
   // reading" row's null daily_kwh should contribute nothing, not a 0.
   const realKwh = (rs: typeof rows) =>
     rs.filter((r) => r.daily_kwh !== null).map((r) => r.daily_kwh as number);
 
-  const perInverterToday = site.inverters
+  const rangeIsSingleDay = effectiveRange.from === effectiveRange.to;
+
+  // "No reading" only means something for a single specific day -- across a
+  // multi-day range it's ambiguous, so it's left false and simply unused by
+  // callers outside the single-day case (e.g. the underperformance check).
+  const perInverterRange = site.inverters
     .filter((inv) => inv.is_active)
     .map((inv) => {
-      const row = todayRows.find((r) => r.inverter_id === inv.id);
+      const invRows = rangeRows.filter((r) => r.inverter_id === inv.id);
       return {
         inverterId: inv.id,
         name: inv.name,
-        kwh: row?.daily_kwh ?? 0,
-        noReading: row?.no_reading ?? false,
+        kwh: sum(realKwh(invRows)),
+        noReading: rangeIsSingleDay ? (invRows[0]?.no_reading ?? false) : false,
       };
     });
 
-  const perInverterMonth = site.inverters
-    .filter((inv) => inv.is_active)
-    .map((inv) => ({
-      inverterId: inv.id,
-      name: inv.name,
-      kwh: sum(realKwh(monthRows.filter((r) => r.inverter_id === inv.id))),
-    }));
+  const baseline = (baselineRows ?? []).map((b) => ({
+    month: b.month,
+    expectedDailyKwhLow: b.expected_daily_kwh_low,
+    expectedDailyKwhMid: b.expected_daily_kwh_mid,
+    expectedDailyKwhHigh: b.expected_daily_kwh_high,
+  }));
+
+  const allReadings = rows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh }));
+  const rangeSummary = computeRangeSummary(allReadings, effectiveRange.from, effectiveRange.to);
 
   return {
     today,
     todayKwh: sum(realKwh(todayRows)),
     monthKwh: sum(realKwh(monthRows)),
     lifetimeKwh: sum(realKwh(rows)),
-    perInverterToday,
-    perInverterMonth,
-    allReadings: rows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh })),
-    baseline: (baselineRows ?? []).map((b) => ({
-      month: b.month,
-      expectedDailyKwhLow: b.expected_daily_kwh_low,
-      expectedDailyKwhMid: b.expected_daily_kwh_mid,
-      expectedDailyKwhHigh: b.expected_daily_kwh_high,
-    })),
+    range: effectiveRange,
+    rangeKwh: rangeSummary.actualKwh,
+    rangeDaysWithData: rangeSummary.daysWithData,
+    rangeTotalDays: rangeSummary.totalDays,
+    rangeExpectedMidKwh: computeRangeExpectedMidKwh(
+      effectiveRange.from,
+      effectiveRange.to,
+      baseline,
+    ),
+    rangeIsSingleDay,
+    perInverterRange,
+    allReadings,
+    baseline,
     alerts: (alertRows ?? []).map((a) => ({
       id: a.id,
       message: a.message,

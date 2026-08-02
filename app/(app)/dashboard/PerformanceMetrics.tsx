@@ -4,16 +4,16 @@ import { computeCUF, computeSpecificYield } from "@/lib/calc/kpis";
 import { formatPercent } from "@/lib/format";
 
 export function PerformanceMetrics({
-  monthKwh,
+  rangeKwh,
   totalDcCapacityKwp,
-  dayOfMonth,
+  rangeDays,
 }: {
-  monthKwh: number;
+  rangeKwh: number;
   totalDcCapacityKwp: number;
-  dayOfMonth: number;
+  rangeDays: number;
 }) {
-  const cufPercent = computeCUF(monthKwh, totalDcCapacityKwp, dayOfMonth);
-  const specificYield = computeSpecificYield(monthKwh, totalDcCapacityKwp);
+  const cufPercent = computeCUF(rangeKwh, totalDcCapacityKwp, rangeDays);
+  const specificYield = computeSpecificYield(rangeKwh, totalDcCapacityKwp);
 
   return (
     <>
@@ -22,10 +22,10 @@ export function PerformanceMetrics({
           <p className="flex items-center gap-1 text-sm text-muted-foreground">
             Capacity utilization
             <InfoTooltip>
-              Actual generation this month as a share of what your installed DC capacity could
-              theoretically produce running flat-out, 24 hours a day. Real systems typically run
-              15–25% due to daylight hours, weather, and panel angle — this isn&apos;t a defect,
-              it&apos;s how solar works.
+              Actual generation in the selected period as a share of what your installed DC
+              capacity could theoretically produce running flat-out, 24 hours a day. Real systems
+              typically run 15–25% due to daylight hours, weather, and panel angle — this
+              isn&apos;t a defect, it&apos;s how solar works.
             </InfoTooltip>
           </p>
           <p className="mt-1 text-2xl font-semibold">{formatPercent(cufPercent)}</p>
@@ -36,8 +36,8 @@ export function PerformanceMetrics({
           <p className="flex items-center gap-1 text-sm text-muted-foreground">
             Specific yield
             <InfoTooltip>
-              kWh generated this month per kWp of installed DC capacity — a standard way to
-              compare performance across systems of different sizes.
+              kWh generated in the selected period per kWp of installed DC capacity — a standard
+              way to compare performance across systems of different sizes.
             </InfoTooltip>
           </p>
           <p className="mt-1 text-2xl font-semibold">
