@@ -43,9 +43,29 @@ export function LogCalendar({
   loggedDates: Set<string>;
   onSelect: (date: string) => void;
 }) {
-  const selected = parseDateString(selectedDate);
+  // `selectedDate` only catches up once the ?date= navigation actually
+  // completes (a real server round trip), which felt laggy/unresponsive --
+  // clicking a day now highlights it immediately via this local override.
+  // Cleared by adjusting state during render (React's documented pattern for
+  // resetting state when a prop changes) rather than in a useEffect, which
+  // would cost an extra render and risk a visible flash back to the old
+  // selection before snapping to the new one.
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
+  const [lastSelectedDate, setLastSelectedDate] = useState(selectedDate);
+  if (selectedDate !== lastSelectedDate) {
+    setLastSelectedDate(selectedDate);
+    setPendingDate(null);
+  }
+
+  const displayedSelectedDate = pendingDate ?? selectedDate;
+  const selected = parseDateString(displayedSelectedDate);
   const todayDate = parseDateString(today);
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(selected));
+
+  function handleSelect(dateStr: string) {
+    setPendingDate(dateStr);
+    onSelect(dateStr);
+  }
 
   const gridStart = startOfWeek(startOfMonth(viewMonth));
   const gridEnd = endOfWeek(endOfMonth(viewMonth));
@@ -96,11 +116,11 @@ export function LogCalendar({
                 key={dateStr}
                 type="button"
                 disabled={isFuture}
-                onClick={() => onSelect(dateStr)}
+                onClick={() => handleSelect(dateStr)}
                 aria-label={format(day, "MMMM d, yyyy")}
                 aria-current={isToday ? "date" : undefined}
                 className={cn(
-                  "relative flex h-8 w-full flex-col items-center justify-center rounded-md text-xs transition-colors",
+                  "relative flex h-8 w-full flex-col items-center justify-center rounded-md text-xs transition-[background-color,color,transform] duration-150 active:scale-90",
                   !inMonth && "text-muted-foreground/40",
                   inMonth && !isSelected && !isFuture && "text-foreground hover:bg-secondary",
                   isSelected && "bg-primary font-medium text-primary-foreground",

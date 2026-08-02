@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,7 +33,6 @@ import {
 type InverterRowData = {
   id: string;
   name: string;
-  ratedCapacityKw: number;
   existing: { dailyKwh: number; cumulativeMwh: number; isReset: boolean } | null;
   previousDailyKwh: number | null;
   previousCumulativeMwh: number | null;
@@ -104,6 +103,12 @@ export function LoggingForm({
   const [issuesByInverter, setIssuesByInverter] = useState<Record<string, ConfirmationIssue>>({});
   const [editingIds, setEditingIds] = useState<Set<string>>(new Set());
   const loggedDatesSet = useMemo(() => new Set(loggedDates), [loggedDates]);
+  // Same isPending-driven fade already used for the dashboard's trend-chart
+  // tabs: keeps the current reading cards visible (dimmed) while the new
+  // date's data streams in, instead of an abrupt jump to the route's
+  // loading.tsx skeleton -- reads as "updating in place" rather than
+  // "reloading the page."
+  const [isPending, startTransition] = useTransition();
 
   const defaultValues: DailyLogFormValues = useMemo(
     () => ({
@@ -142,7 +147,9 @@ export function LoggingForm({
   }, [defaultValues, reset]);
 
   function goToDate(newDate: string) {
-    router.push(`/log?date=${newDate}`);
+    startTransition(() => {
+      router.push(`/log?date=${newDate}`);
+    });
   }
 
   async function onSubmit(values: DailyLogInput) {
@@ -200,7 +207,9 @@ export function LoggingForm({
         />
       </div>
 
-      <div className="mx-auto w-full max-w-lg md:mx-0 md:max-w-none">
+      <div
+        className={`mx-auto w-full max-w-lg transition-opacity duration-150 md:mx-0 md:max-w-none ${isPending ? "opacity-50" : "opacity-100"}`}
+      >
         <div className="mb-4 flex items-center justify-between">
           <Button
             type="button"
