@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CalendarRange } from "lucide-react";
+import { CalendarRange, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +48,7 @@ export function DateRangeFilter({ today, earliestDate }: { today: string; earlie
   }, [today, earliestDate]);
 
   const activePreset = presets.find((p) => p.from === from && p.to === to);
+  const activeLabel = activePreset?.label ?? formatRangeLabel(from, to);
 
   function navigate(nextFrom: string, nextTo: string) {
     startTransition(() => {
@@ -62,73 +63,82 @@ export function DateRangeFilter({ today, earliestDate }: { today: string; earlie
   }
 
   return (
-    <div
-      className={`flex flex-wrap items-center gap-1.5 transition-opacity ${isPending ? "opacity-60" : "opacity-100"}`}
-    >
-      {presets.map((p) => (
-        <Button
-          key={p.key}
-          variant={activePreset?.key === p.key ? "secondary" : "outline"}
-          size="sm"
-          onClick={() => navigate(p.from, p.to)}
-        >
-          {p.label}
-        </Button>
-      ))}
-      <Popover
-        open={customOpen}
-        onOpenChange={(open) => {
-          setCustomOpen(open);
-          if (open) {
-            setDraftFrom(from);
-            setDraftTo(to);
-          }
-        }}
+    <div className="flex flex-col items-start gap-1">
+      <div
+        className={`flex flex-wrap items-center gap-1.5 transition-opacity ${isPending ? "opacity-60" : "opacity-100"}`}
       >
-        <PopoverTrigger render={<Button variant={!activePreset ? "secondary" : "outline"} size="sm" />}>
-          <CalendarRange className="size-3.5" />
-          {!activePreset ? formatRangeLabel(from, to) : "Custom"}
-        </PopoverTrigger>
-        <PopoverContent className="w-auto">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="range-from" className="text-xs text-muted-foreground">
-                  From
-                </Label>
-                <Input
-                  id="range-from"
-                  type="date"
-                  value={draftFrom}
-                  min={earliestDate}
-                  max={draftTo || today}
-                  onChange={(e) => setDraftFrom(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="range-to" className="text-xs text-muted-foreground">
-                  To
-                </Label>
-                <Input
-                  id="range-to"
-                  type="date"
-                  value={draftTo}
-                  min={draftFrom || earliestDate}
-                  max={today}
-                  onChange={(e) => setDraftTo(e.target.value)}
-                />
-              </div>
-            </div>
+        {presets.map((p) => {
+          const isActive = activePreset?.key === p.key;
+          return (
             <Button
+              key={p.key}
+              variant={isActive ? "default" : "outline"}
               size="sm"
-              disabled={!draftFrom || !draftTo || draftFrom > draftTo}
-              onClick={applyCustom}
+              onClick={() => navigate(p.from, p.to)}
             >
-              Apply
+              {isActive && <Check className="size-3.5" />}
+              {p.label}
             </Button>
-          </div>
-        </PopoverContent>
-      </Popover>
+          );
+        })}
+        <Popover
+          open={customOpen}
+          onOpenChange={(open) => {
+            setCustomOpen(open);
+            if (open) {
+              setDraftFrom(from);
+              setDraftTo(to);
+            }
+          }}
+        >
+          <PopoverTrigger render={<Button variant={!activePreset ? "default" : "outline"} size="sm" />}>
+            {!activePreset ? <Check className="size-3.5" /> : <CalendarRange className="size-3.5" />}
+            {!activePreset ? formatRangeLabel(from, to) : "Custom"}
+          </PopoverTrigger>
+          <PopoverContent className="w-auto">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="range-from" className="text-xs text-muted-foreground">
+                    From
+                  </Label>
+                  <Input
+                    id="range-from"
+                    type="date"
+                    value={draftFrom}
+                    min={earliestDate}
+                    max={draftTo || today}
+                    onChange={(e) => setDraftFrom(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="range-to" className="text-xs text-muted-foreground">
+                    To
+                  </Label>
+                  <Input
+                    id="range-to"
+                    type="date"
+                    value={draftTo}
+                    min={draftFrom || earliestDate}
+                    max={today}
+                    onChange={(e) => setDraftTo(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button
+                size="sm"
+                disabled={!draftFrom || !draftTo || draftFrom > draftTo}
+                onClick={applyCustom}
+              >
+                Apply
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Showing <span className="font-medium text-foreground">{activeLabel}</span>
+      </p>
     </div>
   );
 }
