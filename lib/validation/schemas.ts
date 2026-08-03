@@ -30,6 +30,9 @@ export const siteSchema = z.object({
 });
 export type SiteInput = z.infer<typeof siteSchema>;
 
+export const updateSiteNameSchema = siteSchema.pick({ name: true });
+export type UpdateSiteNameInput = z.infer<typeof updateSiteNameSchema>;
+
 export const inverterSchema = z.object({
   name: z.string().min(1, "Inverter name is required").max(100),
   manufacturer: z.string().max(100).optional().or(z.literal("")),

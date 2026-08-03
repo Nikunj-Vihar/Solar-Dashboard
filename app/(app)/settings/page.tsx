@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { getCurrentSite } from "@/lib/data/site";
+import { SiteNameCard } from "./SiteNameCard";
 import { PublicShareCard } from "./PublicShareCard";
 import { InvertersCard } from "./InvertersCard";
 import { ReportSettingsCard } from "./ReportSettingsCard";
@@ -32,6 +33,7 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto max-w-lg space-y-4">
       <h1 className="text-2xl font-semibold">Settings</h1>
+      <SiteNameCard initialName={site.name} />
       <PublicShareCard initialIsPublic={site.is_public} initialSlug={site.public_share_slug} />
       <InvertersCard initialInverters={activeInverters} />
       <ReportSettingsCard initialFrequency={site.report_frequency} />

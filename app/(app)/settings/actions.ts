@@ -9,7 +9,13 @@ import { getAuthedUser, getCurrentSite } from "@/lib/data/site";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { computeHealthStatus, type HealthStatus } from "@/lib/calc/health";
 import { computeRupeeSaved, computeCo2OffsetKg } from "@/lib/calc/kpis";
-import { inverterSchema, reportFrequencySchema, type InverterInput, type ReportFrequency } from "@/lib/validation/schemas";
+import {
+  inverterSchema,
+  reportFrequencySchema,
+  updateSiteNameSchema,
+  type InverterInput,
+  type ReportFrequency,
+} from "@/lib/validation/schemas";
 import { ConfirmActionEmail } from "@/emails/ConfirmActionEmail";
 import { StatusEmail } from "@/emails/StatusEmail";
 
@@ -51,6 +57,32 @@ export async function togglePublicShare(enable: boolean): Promise<TogglePublicSh
 }
 
 type ActionResult = { ok: true } | { ok: false; error: string };
+
+export async function updateSiteName(name: string): Promise<ActionResult> {
+  const user = await getAuthedUser();
+  if (!user) {
+    return { ok: false, error: "You must be signed in." };
+  }
+
+  const parsed = updateSiteNameSchema.safeParse({ name });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid site name." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("sites")
+    .update({ name: parsed.data.name })
+    .eq("owner_id", user.id);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+  revalidatePath("/log");
+  return { ok: true };
+}
 
 async function getOwnedSiteId(userId: string, supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: site } = await supabase
