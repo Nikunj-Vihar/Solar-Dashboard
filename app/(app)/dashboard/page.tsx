@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentSite } from "@/lib/data/site";
 import { getDashboardData } from "@/lib/data/dashboard";
-import { computeHealthStatus } from "@/lib/calc/health";
+import { computeHealthStatus, pickHealthReason } from "@/lib/calc/health";
 import { resolveDateRange } from "@/lib/calc/range";
 import { formatRangeLabel } from "@/lib/format";
 import { todayInTimezone } from "@/lib/date";
@@ -30,6 +30,7 @@ export default async function DashboardPage({
   const data = await getDashboardData(site, range);
 
   const healthStatus = computeHealthStatus(data.alerts);
+  const healthReason = pickHealthReason(data.alerts, healthStatus);
   const totalDcCapacityKwp = site.inverters
     .filter((inv) => inv.is_active)
     .reduce((sum, inv) => sum + inv.dc_capacity_kwp, 0);
@@ -51,11 +52,12 @@ export default async function DashboardPage({
         rangeLabel={rangeLabel}
         lifetimeKwh={data.lifetimeKwh}
         healthStatus={healthStatus}
+        healthReason={healthReason}
       />
 
       <InverterBarChart data={data.perInverterRange} singleDay={data.rangeIsSingleDay} />
 
-      <TrendChart readings={data.allReadings} baseline={data.baseline} today={data.today} />
+      <TrendChart readings={data.allReadings} baseline={data.baseline} range={range} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <ImpactFigures
@@ -72,7 +74,7 @@ export default async function DashboardPage({
         />
       </div>
 
-      <GenerationHeatmap readings={data.allReadings} today={data.today} />
+      <GenerationHeatmap readings={data.allReadings} range={range} />
 
       <LifetimeTrend readings={data.allReadings} today={data.today} />
     </div>

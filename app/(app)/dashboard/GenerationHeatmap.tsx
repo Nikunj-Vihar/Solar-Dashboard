@@ -1,14 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { startOfWeek, addDays as addDaysFns, isSameMonth, format } from "date-fns";
+import { startOfWeek, isSameMonth, format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { densifyDailyTotals } from "@/lib/calc/trend";
 import { formatKwh } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-const LOOKBACK_DAYS = 182; // ~26 weeks, a GitHub-style "last 6 months" view
 
 // Single hue (--viz-series-1), light to dark via opacity -- a sequential
 // scale for magnitude, per this app's color conventions. Level 0 is "no
@@ -41,17 +39,18 @@ type Cell = { dateStr: string; date: Date; kwh: number | null } | null;
 
 export function GenerationHeatmap({
   readings,
-  today,
+  range,
 }: {
   readings: { date: string; kwh: number | null }[];
-  today: string;
+  range: { from: string; to: string };
 }) {
   const { weeks, monthLabels, maxKwh, hasAnyData } = useMemo(() => {
-    const todayDate = parseDateString(today);
-    const start = startOfWeek(addDaysFns(todayDate, -LOOKBACK_DAYS));
+    // Grid always starts on a Monday so full weeks line up, even though the
+    // selected range's actual start may fall mid-week.
+    const start = startOfWeek(parseDateString(range.from));
     const startStr = format(start, "yyyy-MM-dd");
 
-    const dense = densifyDailyTotals(readings, startStr, today);
+    const dense = densifyDailyTotals(readings, startStr, range.to);
     const cells: Cell[] = dense.map((d) => ({
       dateStr: d.date,
       date: parseDateString(d.date),
@@ -84,7 +83,7 @@ export function GenerationHeatmap({
     const maxKwh = values.length > 0 ? Math.max(...values) : 0;
 
     return { weeks, monthLabels, maxKwh, hasAnyData: values.length > 0 };
-  }, [readings, today]);
+  }, [readings, range.from, range.to]);
 
   return (
     <Card>

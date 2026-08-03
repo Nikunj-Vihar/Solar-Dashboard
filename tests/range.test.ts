@@ -56,8 +56,11 @@ describe("computeRangeExpectedMidKwh", () => {
 describe("resolveDateRange", () => {
   const today = "2026-07-15";
 
-  it("defaults to today when both params are missing", () => {
-    expect(resolveDateRange(undefined, undefined, today)).toEqual({ from: today, to: today });
+  it("defaults to the last 30 days when both params are missing", () => {
+    expect(resolveDateRange(undefined, undefined, today)).toEqual({
+      from: "2026-06-16",
+      to: today,
+    });
   });
 
   it("passes through a valid range", () => {

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { addDays, addMonths, startOfMonth } from "@/lib/date";
+import { resolveDateRange } from "@/lib/calc/range";
 import { formatRangeLabel } from "@/lib/format";
 
 type Preset = { key: string; label: string; from: string; to: string };
@@ -19,8 +20,14 @@ export function DateRangeFilter({ today, earliestDate }: { today: string; earlie
   const [isPending, startTransition] = useTransition();
   const [customOpen, setCustomOpen] = useState(false);
 
-  const from = searchParams.get("from") ?? today;
-  const to = searchParams.get("to") ?? today;
+  // Reuses the exact same resolution the server used for this request, so
+  // the highlighted preset (and the fallback when nothing's in the URL yet)
+  // always matches what's actually on screen.
+  const { from, to } = resolveDateRange(
+    searchParams.get("from") ?? undefined,
+    searchParams.get("to") ?? undefined,
+    today,
+  );
 
   const [draftFrom, setDraftFrom] = useState(from);
   const [draftTo, setDraftTo] = useState(to);
@@ -32,6 +39,7 @@ export function DateRangeFilter({ today, earliestDate }: { today: string; earlie
     return [
       { key: "today", label: "Today", from: today, to: today },
       { key: "7d", label: "Last 7 days", from: addDays(today, -6), to: today },
+      { key: "30d", label: "Last 30 days", from: addDays(today, -29), to: today },
       { key: "this_month", label: "This month", from: thisMonthStart, to: today },
       { key: "last_month", label: "Last month", from: lastMonthStart, to: lastMonthEnd },
       { key: "90d", label: "Last 90 days", from: addDays(today, -89), to: today },

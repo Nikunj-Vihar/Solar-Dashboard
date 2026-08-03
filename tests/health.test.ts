@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeHealthStatus, findUnderperformingInverter } from "@/lib/calc/health";
+import { computeHealthStatus, findUnderperformingInverter, pickHealthReason } from "@/lib/calc/health";
 
 describe("computeHealthStatus", () => {
   it("is good with no alerts", () => {
@@ -14,6 +14,42 @@ describe("computeHealthStatus", () => {
     expect(
       computeHealthStatus([{ severity: "watch" }, { severity: "needs_attention" }]),
     ).toBe("needs_attention");
+  });
+});
+
+describe("pickHealthReason", () => {
+  it("is null for good (nothing to explain)", () => {
+    expect(pickHealthReason([], "good")).toBeNull();
+  });
+
+  it("returns the matching watch alert's own message", () => {
+    const reason = pickHealthReason(
+      [{ severity: "watch" as const, message: "Inverter 2 hasn't logged a reading in 3 days." }],
+      "watch",
+    );
+    expect(reason).toBe("Inverter 2 hasn't logged a reading in 3 days.");
+  });
+
+  it("picks a needs_attention message over a watch one when status is needs_attention", () => {
+    const reason = pickHealthReason(
+      [
+        { severity: "watch" as const, message: "watch message" },
+        { severity: "needs_attention" as const, message: "needs_attention message" },
+      ],
+      "needs_attention",
+    );
+    expect(reason).toBe("needs_attention message");
+  });
+
+  it("picks the first (most recent) matching alert when several share a severity", () => {
+    const reason = pickHealthReason(
+      [
+        { severity: "watch" as const, message: "newest" },
+        { severity: "watch" as const, message: "oldest" },
+      ],
+      "watch",
+    );
+    expect(reason).toBe("newest");
   });
 });
 

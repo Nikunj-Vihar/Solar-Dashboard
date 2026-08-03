@@ -47,16 +47,26 @@ export function computeRangeExpectedMidKwh(
   return round2(total);
 }
 
+/** Matches the trend chart's old fixed "day" window, so a first-time visitor sees the same thing as before. */
+const DEFAULT_RANGE_DAYS = 30;
+
 /**
- * Validates and clamps ?from=/?to= search params into a safe range: falls
- * back to today for anything missing/malformed, never allows a future end
- * date, and swaps a backwards range rather than erroring.
+ * Validates and clamps ?from=/?to= search params into a safe range. With no
+ * params at all (a fresh page load), defaults to the last 30 days rather
+ * than just today -- several charts need more than a single day of data to
+ * render anything meaningful. Once the user has picked *something*, though,
+ * an individually missing/malformed field falls back to today rather than
+ * silently widening their choice, a future end date is clamped to today,
+ * and a backwards range is swapped rather than erroring.
  */
 export function resolveDateRange(
   fromParam: string | undefined,
   toParam: string | undefined,
   today: string,
 ): { from: string; to: string } {
+  if (!fromParam && !toParam) {
+    return { from: addDays(today, -(DEFAULT_RANGE_DAYS - 1)), to: today };
+  }
   const from = fromParam && isValidDateString(fromParam) ? fromParam : today;
   const to = toParam && isValidDateString(toParam) ? (toParam > today ? today : toParam) : today;
   return from > to ? { from: to, to: from } : { from, to };

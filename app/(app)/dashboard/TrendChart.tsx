@@ -61,11 +61,11 @@ function TrendTooltip({
 export function TrendChart({
   readings,
   baseline,
-  today,
+  range,
 }: {
   readings: { date: string; kwh: number | null }[];
   baseline: MonthlyBaselineRow[];
-  today: string;
+  range: { from: string; to: string };
 }) {
   const [granularity, setGranularity] = useState<TrendGranularity>("day");
   // Marking the switch as a transition lets the tab's own active state update
@@ -76,19 +76,18 @@ export function TrendChart({
 
   const chartData = useMemo(() => {
     if (readings.length === 0) return [];
-    const earliest = readings.reduce((min, r) => (r.date < min ? r.date : min), today);
-    const dense = densifyDailyTotals(
-      readings,
-      earliest < today ? earliest : today,
-      today,
-    );
+    // Windowed to the selected date-range filter, then still capped per
+    // granularity (below) so a long range like "Lifetime" doesn't render
+    // hundreds of daily points -- for that full-history view, see the
+    // Lifetime by month chart instead.
+    const dense = densifyDailyTotals(readings, range.from, range.to);
     const bucketed = buildTrendData(dense, baseline, granularity);
     const windowSize = WINDOW_BY_GRANULARITY[granularity];
     return bucketed.slice(-windowSize).map((p) => ({
       ...p,
       bandHeight: Math.max(p.expectedHighKwh - p.expectedLowKwh, 0),
     }));
-  }, [readings, baseline, granularity, today]);
+  }, [readings, baseline, granularity, range.from, range.to]);
 
   const hasEnoughData = chartData.length >= 3;
 

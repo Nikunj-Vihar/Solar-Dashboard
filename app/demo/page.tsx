@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Sun, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getDemoDashboardData, DEMO_SITE, DEMO_INVERTERS } from "@/lib/demo-data";
-import { computeHealthStatus } from "@/lib/calc/health";
+import { computeHealthStatus, pickHealthReason } from "@/lib/calc/health";
 import { formatRangeLabel } from "@/lib/format";
+import { addDays } from "@/lib/date";
 import { SummaryRow } from "@/app/(app)/dashboard/SummaryRow";
 import { InverterBarChart } from "@/app/(app)/dashboard/InverterBarChart";
 import { TrendChart } from "@/app/(app)/dashboard/TrendChart";
@@ -23,8 +24,14 @@ export const metadata: Metadata = {
 export default function DemoPage() {
   const data = getDemoDashboardData();
   const healthStatus = computeHealthStatus(data.alerts);
+  const healthReason = pickHealthReason(data.alerts, healthStatus);
   const totalDcCapacityKwp = DEMO_INVERTERS.reduce((sum, inv) => sum + inv.dcCapacityKwp, 0);
   const rangeLabel = formatRangeLabel(data.today, data.today);
+  // The tiles above freeze on "today" (matching the real dashboard's
+  // single-day preset, incl. the underperformance flag on By inverter), but
+  // the trend chart and heatmap are illustrative wide views by design, so
+  // they get the full demo dataset instead of collapsing to one day.
+  const chartRange = { from: addDays(data.today, -89), to: data.today };
 
   return (
     <div className="min-h-svh bg-muted/20">
@@ -57,9 +64,10 @@ export default function DemoPage() {
           rangeLabel={rangeLabel}
           lifetimeKwh={data.lifetimeKwh}
           healthStatus={healthStatus}
+          healthReason={healthReason}
         />
         <InverterBarChart data={data.perInverterRange} singleDay />
-        <TrendChart readings={data.allReadings} baseline={data.baseline} today={data.today} />
+        <TrendChart readings={data.allReadings} baseline={data.baseline} range={chartRange} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ImpactFigures
             rangeKwh={data.rangeKwh}
@@ -74,7 +82,7 @@ export default function DemoPage() {
             rangeDays={data.rangeTotalDays}
           />
         </div>
-        <GenerationHeatmap readings={data.allReadings} today={data.today} />
+        <GenerationHeatmap readings={data.allReadings} range={chartRange} />
         <LifetimeTrend readings={data.allReadings} today={data.today} />
       </main>
     </div>

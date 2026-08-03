@@ -53,12 +53,14 @@ export function SummaryRow({
   rangeLabel,
   lifetimeKwh,
   healthStatus,
+  healthReason,
 }: {
   rangeKwh: number;
   rangeAvgPerDayKwh: number;
   rangeLabel: string;
   lifetimeKwh: number;
   healthStatus: HealthStatus;
+  healthReason: string | null;
 }) {
   const health = HEALTH_CONFIG[healthStatus];
   const HealthIcon = health.icon;
@@ -96,6 +98,11 @@ export function SummaryRow({
             <HealthIcon className="size-5" />
             {health.label}
           </p>
+          {healthReason && (
+            <p className="mt-1 truncate text-xs text-muted-foreground" title={healthReason}>
+              {healthReason}
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
