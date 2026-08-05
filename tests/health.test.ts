@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { computeHealthStatus, findUnderperformingInverter, pickHealthReason } from "@/lib/calc/health";
+import {
+  computeHealthStatus,
+  findUnderperformingInverter,
+  pickHealthReason,
+  filterActiveAlerts,
+} from "@/lib/calc/health";
 
 describe("computeHealthStatus", () => {
   it("is good with no alerts", () => {
@@ -50,6 +55,25 @@ describe("pickHealthReason", () => {
       "watch",
     );
     expect(reason).toBe("newest");
+  });
+});
+
+describe("filterActiveAlerts", () => {
+  const today = "2026-07-15";
+
+  it("keeps a recent baseline_deviation alert", () => {
+    const alerts = [{ alertType: "baseline_deviation", readingDate: "2026-07-13" }];
+    expect(filterActiveAlerts(alerts, today)).toEqual(alerts);
+  });
+
+  it("drops a stale baseline_deviation alert", () => {
+    const alerts = [{ alertType: "baseline_deviation", readingDate: "2026-06-01" }];
+    expect(filterActiveAlerts(alerts, today)).toEqual([]);
+  });
+
+  it("keeps a stale alert of any other type unbounded", () => {
+    const alerts = [{ alertType: "missing_reading", readingDate: "2026-01-01" }];
+    expect(filterActiveAlerts(alerts, today)).toEqual(alerts);
   });
 });
 

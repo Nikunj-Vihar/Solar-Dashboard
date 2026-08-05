@@ -1,4 +1,29 @@
+import { addDays } from "@/lib/date";
+
 export type HealthStatus = "good" | "watch" | "needs_attention";
+
+// baseline_deviation is a per-day event log by design (one row per date a
+// site's total deviated from its baseline), not an ongoing condition --
+// unlike underperformance/missing_reading, nothing ever marks an old day's
+// deviation "resolved" once that day has passed. Left unbounded, health
+// status would get stuck on a single bad day from months ago forever. Only
+// count it toward "current" health within a short recent window; the other
+// alert types self-resolve correctly on their own and stay unbounded.
+export const RECENT_BASELINE_DEVIATION_DAYS = 3;
+
+/**
+ * Filters out stale baseline_deviation alerts, keeping every other alert
+ * type unbounded. Shared by the private dashboard's query (built directly
+ * into its Supabase filter) and the public dashboard, which fetches every
+ * unresolved alert in one shot and applies this in TS instead.
+ */
+export function filterActiveAlerts<T extends { alertType: string; readingDate: string }>(
+  alerts: T[],
+  today: string,
+): T[] {
+  const cutoff = addDays(today, -RECENT_BASELINE_DEVIATION_DAYS);
+  return alerts.filter((a) => a.alertType !== "baseline_deviation" || a.readingDate >= cutoff);
+}
 
 export function computeHealthStatus(
   alerts: { severity: "watch" | "needs_attention" }[],

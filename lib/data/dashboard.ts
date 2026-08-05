@@ -1,17 +1,9 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { todayInTimezone, addDays } from "@/lib/date";
-import { computeRangeSummary, computeRangeExpectedMidKwh } from "@/lib/calc/range";
+import { computeRangeFields } from "@/lib/calc/dashboardCompute";
+import { RECENT_BASELINE_DEVIATION_DAYS } from "@/lib/calc/health";
 import type { SiteWithInverters } from "./site";
-
-// baseline_deviation is a per-day event log by design (one row per date a
-// site's total deviated from its baseline), not an ongoing condition --
-// unlike underperformance/missing_reading, nothing ever marks an old day's
-// deviation "resolved" once that day has passed. Left unbounded, health
-// status would get stuck on a single bad day from months ago forever. Only
-// count it toward "current" health within a short recent window; the other
-// alert types self-resolve correctly on their own and stay unbounded.
-const RECENT_BASELINE_DEVIATION_DAYS = 3;
 
 export type DashboardData = {
   today: string;
@@ -76,30 +68,10 @@ export async function getDashboardData(
   const rows = readings ?? [];
   const todayRows = rows.filter((r) => r.reading_date === today);
   const monthRows = rows.filter((r) => r.reading_date.startsWith(currentMonth));
-  const rangeRows = rows.filter(
-    (r) => r.reading_date >= effectiveRange.from && r.reading_date <= effectiveRange.to,
-  );
   // Real (non-skipped) rows only, for the summed totals below -- a "no
   // reading" row's null daily_kwh should contribute nothing, not a 0.
   const realKwh = (rs: typeof rows) =>
     rs.filter((r) => r.daily_kwh !== null).map((r) => r.daily_kwh as number);
-
-  const rangeIsSingleDay = effectiveRange.from === effectiveRange.to;
-
-  // "No reading" only means something for a single specific day -- across a
-  // multi-day range it's ambiguous, so it's left false and simply unused by
-  // callers outside the single-day case (e.g. the underperformance check).
-  const perInverterRange = site.inverters
-    .filter((inv) => inv.is_active)
-    .map((inv) => {
-      const invRows = rangeRows.filter((r) => r.inverter_id === inv.id);
-      return {
-        inverterId: inv.id,
-        name: inv.name,
-        kwh: sum(realKwh(invRows)),
-        noReading: rangeIsSingleDay ? (invRows[0]?.no_reading ?? false) : false,
-      };
-    });
 
   const baseline = (baselineRows ?? []).map((b) => ({
     month: b.month,
@@ -108,26 +80,22 @@ export async function getDashboardData(
     expectedDailyKwhHigh: b.expected_daily_kwh_high,
   }));
 
-  const allReadings = rows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh }));
-  const rangeSummary = computeRangeSummary(allReadings, effectiveRange.from, effectiveRange.to);
+  const activeInverters = site.inverters.filter((inv) => inv.is_active);
+  const rangeFields = computeRangeFields(rows, activeInverters, effectiveRange, baseline);
 
   return {
     today,
     todayKwh: sum(realKwh(todayRows)),
     monthKwh: sum(realKwh(monthRows)),
-    lifetimeKwh: sum(realKwh(rows)),
+    lifetimeKwh: rangeFields.lifetimeKwh,
     range: effectiveRange,
-    rangeKwh: rangeSummary.actualKwh,
-    rangeDaysWithData: rangeSummary.daysWithData,
-    rangeTotalDays: rangeSummary.totalDays,
-    rangeExpectedMidKwh: computeRangeExpectedMidKwh(
-      effectiveRange.from,
-      effectiveRange.to,
-      baseline,
-    ),
-    rangeIsSingleDay,
-    perInverterRange,
-    allReadings,
+    rangeKwh: rangeFields.rangeKwh,
+    rangeDaysWithData: rangeFields.rangeDaysWithData,
+    rangeTotalDays: rangeFields.rangeTotalDays,
+    rangeExpectedMidKwh: rangeFields.rangeExpectedMidKwh,
+    rangeIsSingleDay: rangeFields.rangeIsSingleDay,
+    perInverterRange: rangeFields.perInverterRange,
+    allReadings: rows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh })),
     baseline,
     alerts: (alertRows ?? []).map((a) => ({
       id: a.id,

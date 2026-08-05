@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { computeHealthStatus, filterActiveAlerts } from "@/lib/calc/health";
+
+type ActiveAlertShape = {
+  alertType: string;
+  readingDate: string;
+  severity: "watch" | "needs_attention";
+};
 
 // Verifies spec §10.3 against the real Postgres functions (refresh_alerts,
 // check_daily_baseline_deviation) in supabase/migrations/0005_alerts_and_cron.sql —
@@ -334,7 +341,14 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
     await cleanupSite(site3.userId);
   });
 
-  it("get_public_dashboard doesn't get stuck on a stale baseline_deviation alert", async () => {
+  it("get_public_dashboard returns raw alert rows, and filterActiveAlerts drops a stale baseline_deviation alert", async () => {
+    // get_public_dashboard used to pre-compute a Good/Watch/Needs Attention
+    // string in SQL; it now returns raw unresolved alerts (see migration
+    // 0012) and the app computes health status in TS with the same
+    // filterActiveAlerts/computeHealthStatus the private dashboard uses.
+    // This test exercises the real RPC's output shape end to end, not just
+    // the pure TS functions in isolation (covered separately in
+    // tests/health.test.ts).
     const site6 = await seedSite("public-health");
     const slug = `public-health-${Date.now()}`;
     const { error: publicErr } = await admin
@@ -356,11 +370,21 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
     });
     if (insertErr) throw insertErr;
 
-    const { data: staleResult, error: staleErr } = await admin.rpc("get_public_dashboard", {
+    const { data: staleData, error: staleErr } = await admin.rpc("get_public_dashboard", {
       p_slug: slug,
     });
     if (staleErr) throw staleErr;
-    expect(staleResult.health_status).toBe("Good");
+    expect(staleData.alerts).toHaveLength(1);
+    expect(staleData.alerts[0]).toMatchObject({ alert_type: "baseline_deviation", severity: "watch" });
+    const staleAlerts: ActiveAlertShape[] = staleData.alerts.map(
+      (a: { alert_type: string; reading_date: string }) => ({
+        alertType: a.alert_type,
+        readingDate: a.reading_date,
+        severity: "watch" as const,
+      }),
+    );
+    const staleActive = filterActiveAlerts(staleAlerts, ymd(daysAgo(0)));
+    expect(computeHealthStatus(staleActive)).toBe("good");
 
     // A baseline_deviation alert from today should still count as current.
     const { error: recentErr } = await admin.from("alerts").insert({
@@ -373,12 +397,51 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
     });
     if (recentErr) throw recentErr;
 
-    const { data: recentResult, error: recentFetchErr } = await admin.rpc("get_public_dashboard", {
+    const { data: recentData, error: recentFetchErr } = await admin.rpc("get_public_dashboard", {
       p_slug: slug,
     });
     if (recentFetchErr) throw recentFetchErr;
-    expect(recentResult.health_status).toBe("Watch");
+    expect(recentData.alerts).toHaveLength(2);
+    const recentAlerts: ActiveAlertShape[] = recentData.alerts.map(
+      (a: { alert_type: string; reading_date: string }) => ({
+        alertType: a.alert_type,
+        readingDate: a.reading_date,
+        severity: "watch" as const,
+      }),
+    );
+    const recentActive = filterActiveAlerts(recentAlerts, ymd(daysAgo(0)));
+    expect(computeHealthStatus(recentActive)).toBe("watch");
 
     await cleanupSite(site6.userId);
+  });
+
+  it("get_public_dashboard returns full reading history, baseline, and active inverters for the range filter", async () => {
+    const site7 = await seedSite("public-range");
+    const slug = `public-range-${Date.now()}`;
+    const { error: publicErr } = await admin
+      .from("sites")
+      .update({ is_public: true, public_share_slug: slug })
+      .eq("id", site7.siteId);
+    if (publicErr) throw publicErr;
+
+    const rows = site7.inverterIds.map((invId) => ({
+      site_id: site7.siteId,
+      inverter_id: invId,
+      reading_date: ymd(daysAgo(1)),
+      daily_kwh: 20,
+      cumulative_mwh: 1,
+      no_reading: false,
+      entered_by: site7.userId,
+    }));
+    await insertReadingsInChunks(rows);
+
+    const { data, error } = await admin.rpc("get_public_dashboard", { p_slug: slug });
+    if (error) throw error;
+    expect(data.inverters).toHaveLength(4);
+    expect(data.baseline).toHaveLength(12);
+    expect(data.readings).toHaveLength(4);
+    expect(data.readings[0]).toMatchObject({ daily_kwh: 20, no_reading: false });
+
+    await cleanupSite(site7.userId);
   });
 });
