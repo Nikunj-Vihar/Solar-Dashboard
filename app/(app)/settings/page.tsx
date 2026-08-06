@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
-import { getCurrentSite } from "@/lib/data/site";
+import { getAuthedUser, getCurrentSite } from "@/lib/data/site";
 import { SiteNameCard } from "./SiteNameCard";
+import { ChangePasswordCard } from "./ChangePasswordCard";
 import { PublicShareCard } from "./PublicShareCard";
 import { InvertersCard } from "./InvertersCard";
 import { ReportSettingsCard } from "./ReportSettingsCard";
@@ -14,7 +15,10 @@ export const metadata = {
 };
 
 export default async function SettingsPage() {
-  const site = await getCurrentSite();
+  const [user, site] = await Promise.all([getAuthedUser(), getCurrentSite()]);
+  if (!user?.email) {
+    redirect("/login");
+  }
   if (!site) {
     redirect("/setup");
   }
@@ -34,6 +38,7 @@ export default async function SettingsPage() {
     <div className="mx-auto max-w-lg space-y-4">
       <h1 className="text-2xl font-semibold">Settings</h1>
       <SiteNameCard initialName={site.name} />
+      <ChangePasswordCard email={user.email} />
       <PublicShareCard initialIsPublic={site.is_public} initialSlug={site.public_share_slug} />
       <InvertersCard initialInverters={activeInverters} />
       <ReportSettingsCard initialFrequency={site.report_frequency} />

@@ -19,6 +19,18 @@ export const signUpSchema = z
   });
 export type SignUpInput = z.infer<typeof signUpSchema>;
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    confirmNewPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: "Passwords don't match",
+    path: ["confirmNewPassword"],
+  });
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
 export const siteSchema = z.object({
   name: z.string().min(1, "Site name is required").max(200),
   address: z.string().max(500).optional().or(z.literal("")),
