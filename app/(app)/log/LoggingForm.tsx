@@ -257,7 +257,7 @@ export function LoggingForm({
 
   return (
     <div
-      className={`mx-auto max-w-3xl md:grid md:grid-cols-[280px_1fr] md:items-start md:gap-6 ${mismatchCandidates.length > 0 ? "pb-44" : "pb-24"}`}
+      className={`mx-auto max-w-3xl md:grid md:grid-cols-[280px_1fr] md:items-start md:gap-6 ${mismatchCandidates.length > 0 ? "pb-72 sm:pb-44" : "pb-48 sm:pb-24"}`}
     >
       <div className="hidden md:block">
         <LogCalendar
@@ -453,7 +453,7 @@ export function LoggingForm({
             );
           })}
 
-          <div className="fixed inset-x-0 bottom-0 border-t bg-background p-4">
+          <div className="fixed inset-x-0 bottom-24 border-t bg-background p-4 sm:bottom-0">
             <div className="mx-auto max-w-lg space-y-3">
               {mismatchCandidates.length > 0 && (
                 <Alert variant="warning">
