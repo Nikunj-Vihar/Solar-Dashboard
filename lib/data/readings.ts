@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 export type ExistingReading = {
   inverter_id: string;
   daily_kwh: number | null;
+  cumulative_mwh: number | null;
+  is_reset: boolean;
   no_reading: boolean;
 };
 
@@ -14,7 +16,7 @@ export async function getReadingsForDate(
   const supabase = await createClient();
   const { data } = await supabase
     .from("daily_readings")
-    .select("inverter_id, daily_kwh, no_reading")
+    .select("inverter_id, daily_kwh, cumulative_mwh, is_reset, no_reading")
     .eq("site_id", siteId)
     .eq("reading_date", date);
   return data ?? [];

@@ -78,15 +78,25 @@ export const readingEntrySchema = z
     noReading: z.boolean().default(false),
     // Blank fields coerce to undefined rather than throwing, so we can
     // surface a friendly "required" message instead of a raw zod coercion
-    // error -- and so it's valid to omit entirely when noReading is set.
+    // error -- and so they're valid to omit entirely when noReading is set.
     dailyKwh: z.preprocess(
       (v) => (v === "" ? undefined : v),
       z.coerce.number().min(0, "Can't be negative").max(1_000_000).optional(),
     ),
+    cumulativeMwh: z.preprocess(
+      (v) => (v === "" ? undefined : v),
+      z.coerce.number().min(0, "Can't be negative").optional(),
+    ),
+    isReset: z.boolean().default(false),
+    confirmMismatch: z.boolean().default(false),
   })
   .refine((data) => data.noReading || data.dailyKwh !== undefined, {
     message: "Required",
     path: ["dailyKwh"],
+  })
+  .refine((data) => data.noReading || data.cumulativeMwh !== undefined, {
+    message: "Required",
+    path: ["cumulativeMwh"],
   });
 export type ReadingEntryInput = z.output<typeof readingEntrySchema>;
 

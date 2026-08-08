@@ -40,10 +40,13 @@ export default async function LogPage({
         existing: existing
           ? {
               dailyKwh: existing.daily_kwh,
+              cumulativeMwh: existing.cumulative_mwh,
+              isReset: existing.is_reset,
               noReading: existing.no_reading,
             }
           : null,
         previousDailyKwh: previous?.daily_kwh ?? null,
+        previousCumulativeMwh: previous?.cumulative_mwh ?? null,
       };
     });
 
