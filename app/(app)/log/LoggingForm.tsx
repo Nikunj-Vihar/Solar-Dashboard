@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   dailyLogSchema,
@@ -12,15 +12,12 @@ import {
   type DailyLogInput,
 } from "@/lib/validation/schemas";
 import { submitDailyLog, deleteDailyReading } from "./actions";
-import { checkCumulativeAndCrossCheck, type CrossCheckResult } from "@/lib/validation/readings";
 import { addDays } from "@/lib/date";
 import { LogCalendar } from "./LogCalendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -36,41 +33,10 @@ type InverterRowData = {
   name: string;
   existing: {
     dailyKwh: number | null;
-    cumulativeMwh: number | null;
-    isReset: boolean;
     noReading: boolean;
   } | null;
   previousDailyKwh: number | null;
-  previousCumulativeMwh: number | null;
 };
-
-// Runs the same pure cross-check the server uses (lib/validation/readings.ts)
-// against whatever's currently typed, so a mismatched/decreased reading shows
-// up as the user types instead of only after a blocked submit -- returns null
-// while a field is still empty/unparseable rather than warning prematurely.
-function getLiveStatus(
-  inv: InverterRowData,
-  dailyKwhStr: string,
-  cumulativeMwhStr: string,
-  isReset: boolean,
-): CrossCheckResult | null {
-  const dailyKwh = Number(dailyKwhStr);
-  const cumulativeMwh = Number(cumulativeMwhStr);
-  if (
-    dailyKwhStr === "" ||
-    cumulativeMwhStr === "" ||
-    !Number.isFinite(dailyKwh) ||
-    !Number.isFinite(cumulativeMwh)
-  ) {
-    return null;
-  }
-  return checkCumulativeAndCrossCheck({
-    dailyKwh,
-    cumulativeMwh,
-    previousCumulativeMwh: inv.previousCumulativeMwh,
-    isReset,
-  });
-}
 
 function DeleteReadingDialog({
   inverterName,
@@ -153,9 +119,6 @@ export function LoggingForm({
         inverterId: inv.id,
         noReading: inv.existing?.noReading ?? false,
         dailyKwh: inv.existing?.dailyKwh != null ? String(inv.existing.dailyKwh) : "",
-        cumulativeMwh: inv.existing?.cumulativeMwh != null ? String(inv.existing.cumulativeMwh) : "",
-        isReset: inv.existing?.isReset ?? false,
-        confirmMismatch: false,
       })),
     }),
     [date, inverters],
@@ -200,41 +163,25 @@ export function LoggingForm({
       return;
     }
 
-    if (result.needsConfirmation) {
-      // The live checks below should already have surfaced (and let the user
-      // confirm) anything the server would flag, so this is just a fallback
-      // for the rare case they diverge -- e.g. someone else logged the
-      // previous day's reading in between loading this page and submitting.
-      toast.error("Double-check the flagged readings before saving");
-      return;
-    }
-
     toast.error(result.error);
   }
 
-  // Recomputed on every render from the live form values (not just on
-  // submit) so a mismatch/reset warning shows up as soon as it's true,
-  // instead of only after a blocked submit round trip.
-  const rowChecks = inverters.map((inv, i) => {
-    const editing = editingIds.has(inv.id) || !inv.existing;
-    // These two fields go through z.preprocess (see schemas.ts), which widens
-    // their react-hook-form path type to `unknown` -- cast back to the string
-    // the underlying <input> actually produces.
+  // Recomputed on every render from the live form values so the collective
+  // total below updates as soon as the user types, not just after a submit.
+  const rowStates = inverters.map((_, i) => {
+    // dailyKwh goes through z.preprocess (see schemas.ts), which widens its
+    // react-hook-form path type to `unknown` -- cast back to the string the
+    // underlying <input> actually produces.
     const dailyKwhStr = String(watch(`readings.${i}.dailyKwh`) ?? "");
-    const cumulativeMwhStr = String(watch(`readings.${i}.cumulativeMwh`) ?? "");
-    const isResetVal = watch(`readings.${i}.isReset`) ?? false;
-    const confirmMismatchVal = watch(`readings.${i}.confirmMismatch`) ?? false;
     const noReadingVal = watch(`readings.${i}.noReading`) ?? false;
-    const status =
-      editing && !noReadingVal ? getLiveStatus(inv, dailyKwhStr, cumulativeMwhStr, isResetVal) : null;
-    return { index: i, dailyKwhStr, cumulativeMwhStr, isResetVal, confirmMismatchVal, noReadingVal, status };
+    return { index: i, dailyKwhStr, noReadingVal };
   });
-  // "Same MWh as yesterday" (and similar small mismatches) used to force a
-  // per-inverter red error + checkbox on every single save -- now it's one
-  // low-key warning above Save that clears every flagged row in one tick.
-  const mismatchCandidates = rowChecks.filter((rc) => rc.status?.status === "mismatch");
-  const allMismatchesConfirmed =
-    mismatchCandidates.length > 0 && mismatchCandidates.every((rc) => rc.confirmMismatchVal);
+  const totalKwh = rowStates.reduce((sum, rs) => {
+    if (rs.noReadingVal) return sum;
+    const n = Number(rs.dailyKwhStr);
+    return Number.isFinite(n) ? sum + n : sum;
+  }, 0);
+  const roundedTotalKwh = Math.round(totalKwh * 100) / 100;
 
   async function handleDelete(inverterId: string) {
     const result = await deleteDailyReading(inverterId, date);
@@ -245,7 +192,6 @@ export function LoggingForm({
     const index = inverters.findIndex((inv) => inv.id === inverterId);
     if (index !== -1) {
       setValue(`readings.${index}.dailyKwh`, "");
-      setValue(`readings.${index}.cumulativeMwh`, "");
       setValue(`readings.${index}.noReading`, false);
     }
     setEditingIds((prev) => new Set(prev).add(inverterId));
@@ -256,9 +202,7 @@ export function LoggingForm({
   const isToday = date === today;
 
   return (
-    <div
-      className={`mx-auto max-w-3xl md:grid md:grid-cols-[280px_1fr] md:items-start md:gap-6 ${mismatchCandidates.length > 0 ? "pb-72 sm:pb-44" : "pb-48 sm:pb-24"}`}
-    >
+    <div className="mx-auto max-w-3xl pb-48 sm:pb-24 md:grid md:grid-cols-[280px_1fr] md:items-start md:gap-6">
       <div className="hidden md:block">
         <LogCalendar
           selectedDate={date}
@@ -315,7 +259,7 @@ export function LoggingForm({
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           {inverters.map((inv, i) => {
-            const rc = rowChecks[i];
+            const rs = rowStates[i];
             const isEditing = editingIds.has(inv.id) || !inv.existing;
 
             return (
@@ -329,55 +273,36 @@ export function LoggingForm({
                           type="button"
                           className="shrink-0 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
                           onClick={() => {
-                            const next = !rc.noReadingVal;
+                            const next = !rs.noReadingVal;
                             setValue(`readings.${i}.noReading`, next);
                             if (next) {
                               setValue(`readings.${i}.dailyKwh`, "");
-                              setValue(`readings.${i}.cumulativeMwh`, "");
                             }
                           }}
                         >
-                          {rc.noReadingVal ? "Enter a reading instead" : "No reading for this day"}
+                          {rs.noReadingVal ? "Enter a reading instead" : "No reading for this day"}
                         </button>
                       </div>
-                      {rc.noReadingVal ? (
+                      {rs.noReadingVal ? (
                         <p className="text-sm text-muted-foreground">
                           Marked as no reading for this day.
                         </p>
                       ) : (
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`daily-${i}`} className="text-xs">
-                              Daily (kWh)
-                            </Label>
-                            <Input
-                              id={`daily-${i}`}
-                              inputMode="decimal"
-                              autoComplete="off"
-                              placeholder={
-                                inv.previousDailyKwh !== null
-                                  ? `Yesterday: ${inv.previousDailyKwh}`
-                                  : "0"
-                              }
-                              {...register(`readings.${i}.dailyKwh`)}
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`cumulative-${i}`} className="text-xs">
-                              Cumulative (MWh)
-                            </Label>
-                            <Input
-                              id={`cumulative-${i}`}
-                              inputMode="decimal"
-                              autoComplete="off"
-                              placeholder={
-                                inv.previousCumulativeMwh !== null
-                                  ? `Yesterday: ${inv.previousCumulativeMwh}`
-                                  : "0"
-                              }
-                              {...register(`readings.${i}.cumulativeMwh`)}
-                            />
-                          </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`daily-${i}`} className="text-xs">
+                            Daily (kWh)
+                          </Label>
+                          <Input
+                            id={`daily-${i}`}
+                            inputMode="decimal"
+                            autoComplete="off"
+                            placeholder={
+                              inv.previousDailyKwh !== null
+                                ? `Yesterday: ${inv.previousDailyKwh}`
+                                : "0"
+                            }
+                            {...register(`readings.${i}.dailyKwh`)}
+                          />
                         </div>
                       )}
                     </>
@@ -390,10 +315,7 @@ export function LoggingForm({
                             No reading logged for this day.
                           </p>
                         ) : (
-                          <p className="text-sm text-muted-foreground">
-                            {inv.existing!.dailyKwh} kWh · cumulative {inv.existing!.cumulativeMwh}{" "}
-                            MWh
-                          </p>
+                          <p className="text-sm text-muted-foreground">{inv.existing!.dailyKwh} kWh</p>
                         )}
                       </div>
                       <div className="flex items-center gap-0.5">
@@ -415,37 +337,9 @@ export function LoggingForm({
                     </div>
                   )}
 
-                  {!rc.noReadingVal &&
-                    (errors.readings?.[i]?.dailyKwh || errors.readings?.[i]?.cumulativeMwh) && (
+                  {!rs.noReadingVal && errors.readings?.[i]?.dailyKwh && (
                     <p className="text-sm text-destructive">
-                      {errors.readings?.[i]?.dailyKwh?.message ??
-                        errors.readings?.[i]?.cumulativeMwh?.message}
-                    </p>
-                  )}
-
-                  {rc.status?.status === "cumulative_decreased" && (
-                    <Alert variant="warning">
-                      <AlertTriangle className="size-4" />
-                      <AlertDescription>
-                        {`Cumulative (${rc.cumulativeMwhStr} MWh) is lower than yesterday's (${inv.previousCumulativeMwh} MWh).`}
-                        <label className="mt-2 flex items-center gap-1.5 text-sm font-medium">
-                          <Checkbox
-                            checked={rc.isResetVal}
-                            onCheckedChange={(v) =>
-                              setValue(`readings.${i}.isReset`, v === true)
-                            }
-                          />
-                          Yes, the meter was replaced or reset
-                        </label>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {rc.status?.status === "mismatch" && !rc.confirmMismatchVal && (
-                    <p className="flex items-start gap-1.5 text-sm text-(--viz-status-warning)">
-                      <AlertTriangle className="size-3.5 shrink-0 translate-y-0.5" />
-                      Entered {rc.dailyKwhStr} kWh, but the cumulative counter only moved{" "}
-                      {rc.status.computedDeltaKwh} kWh since yesterday.
+                      {errors.readings?.[i]?.dailyKwh?.message}
                     </p>
                   )}
                 </CardContent>
@@ -455,28 +349,10 @@ export function LoggingForm({
 
           <div className="fixed inset-x-0 bottom-24 border-t bg-background p-4 sm:bottom-0">
             <div className="mx-auto max-w-lg space-y-3">
-              {mismatchCandidates.length > 0 && (
-                <Alert variant="warning">
-                  <AlertTriangle className="size-4" />
-                  <AlertDescription>
-                    {mismatchCandidates.length === 1
-                      ? `${inverters[mismatchCandidates[0].index].name}'s reading doesn't quite match its cumulative counter.`
-                      : `${mismatchCandidates.length} readings don't quite match their cumulative counters.`}{" "}
-                    Double-check them above.
-                    <label className="mt-2 flex items-center gap-1.5 text-sm font-medium">
-                      <Checkbox
-                        checked={allMismatchesConfirmed}
-                        onCheckedChange={(v) => {
-                          for (const rc of mismatchCandidates) {
-                            setValue(`readings.${rc.index}.confirmMismatch`, v === true);
-                          }
-                        }}
-                      />
-                      Yes, these are correct
-                    </label>
-                  </AlertDescription>
-                </Alert>
-              )}
+              <div className="flex items-center justify-between text-sm font-medium">
+                <span className="text-muted-foreground">Total</span>
+                <span>{roundedTotalKwh} kWh</span>
+              </div>
               <Button type="submit" className="w-full" size="lg" disabled={submitting}>
                 {submitting ? (
                   <>

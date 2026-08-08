@@ -4,20 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthedUser } from "@/lib/data/site";
 import { dailyLogSchema, type DailyLogInput } from "@/lib/validation/schemas";
-import { checkCumulativeAndCrossCheck, exceedsPhysicalCapacity } from "@/lib/validation/readings";
-import { addDays } from "@/lib/date";
+import { exceedsPhysicalCapacity } from "@/lib/validation/readings";
 
-export type ConfirmationIssue = {
-  inverterId: string;
-  inverterName: string;
-  issue: "cumulative_decreased" | "mismatch";
-  message: string;
-};
-
-export type SubmitDailyLogResult =
-  | { ok: true }
-  | { ok: false; error: string; needsConfirmation?: undefined }
-  | { ok: false; needsConfirmation: ConfirmationIssue[]; error?: undefined };
+export type SubmitDailyLogResult = { ok: true } | { ok: false; error: string };
 
 export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyLogResult> {
   const user = await getAuthedUser();
@@ -57,27 +46,11 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
     }
   }
 
-  const previousDate = addDays(date, -1);
-  const { data: previousReadings } = await supabase
-    .from("daily_readings")
-    .select("inverter_id, cumulative_mwh")
-    .eq("reading_date", previousDate)
-    .in(
-      "inverter_id",
-      readings.map((r) => r.inverterId),
-    );
-  const previousByInverter = new Map(
-    (previousReadings ?? []).map((r) => [r.inverter_id, r.cumulative_mwh]),
-  );
-
-  const confirmations: ConfirmationIssue[] = [];
-
   for (const r of readings) {
     if (r.noReading) continue; // nothing to sanity-check against a day with no numbers
     const inverter = inverterById.get(r.inverterId)!;
     // Guaranteed defined for a non-skipped row by readingEntrySchema's refine.
     const dailyKwh = r.dailyKwh!;
-    const cumulativeMwh = r.cumulativeMwh!;
 
     if (exceedsPhysicalCapacity(dailyKwh, inverter.dc_capacity_kwp)) {
       return {
@@ -85,34 +58,6 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
         error: `${inverter.name}: ${dailyKwh} kWh is above what its DC capacity (${inverter.dc_capacity_kwp} kWp) could plausibly produce in a day — check for a typo.`,
       };
     }
-
-    const previousCumulativeMwh = previousByInverter.get(r.inverterId) ?? null;
-    const check = checkCumulativeAndCrossCheck({
-      dailyKwh,
-      cumulativeMwh,
-      previousCumulativeMwh,
-      isReset: r.isReset,
-    });
-
-    if (check.status === "cumulative_decreased") {
-      confirmations.push({
-        inverterId: r.inverterId,
-        inverterName: inverter.name,
-        issue: "cumulative_decreased",
-        message: `Cumulative (${cumulativeMwh} MWh) is lower than yesterday's (${previousCumulativeMwh} MWh). If this inverter's meter was replaced or reset, confirm below.`,
-      });
-    } else if (check.status === "mismatch" && !r.confirmMismatch) {
-      confirmations.push({
-        inverterId: r.inverterId,
-        inverterName: inverter.name,
-        issue: "mismatch",
-        message: `You entered ${dailyKwh} kWh, but the cumulative counter only moved ${check.computedDeltaKwh} kWh since yesterday. Double-check for a typo, or confirm this is correct.`,
-      });
-    }
-  }
-
-  if (confirmations.length > 0) {
-    return { ok: false, needsConfirmation: confirmations };
   }
 
   const { error: upsertError } = await supabase.from("daily_readings").upsert(
@@ -121,9 +66,6 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
       site_id: site.id,
       reading_date: date,
       daily_kwh: r.noReading ? null : r.dailyKwh,
-      cumulative_mwh: r.noReading ? null : r.cumulativeMwh,
-      is_reset: r.noReading ? false : r.isReset,
-      mismatch_confirmed: r.noReading ? false : r.confirmMismatch,
       no_reading: r.noReading,
       entered_by: user.id,
     })),
