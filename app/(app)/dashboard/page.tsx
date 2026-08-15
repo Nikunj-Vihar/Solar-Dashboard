@@ -57,7 +57,12 @@ export default async function DashboardPage({
 
       <InverterBarChart data={data.perInverterRange} singleDay={data.rangeIsSingleDay} />
 
-      <TrendChart readings={data.allReadings} baseline={data.baseline} range={range} />
+      <TrendChart
+        readings={data.allReadings}
+        baseline={data.baseline}
+        range={range}
+        dailyClimate={data.dailyClimate}
+      />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <ImpactFigures
