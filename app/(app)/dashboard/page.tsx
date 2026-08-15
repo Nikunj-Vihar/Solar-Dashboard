@@ -5,14 +5,14 @@ import { computeHealthStatus, pickHealthReason } from "@/lib/calc/health";
 import { resolveDateRange } from "@/lib/calc/range";
 import { formatRangeLabel } from "@/lib/format";
 import { todayInTimezone } from "@/lib/date";
-import { SummaryRow } from "./SummaryRow";
-import { InverterBarChart } from "./InverterBarChart";
-import { TrendChart } from "./TrendChart";
-import { ImpactFigures } from "./ImpactFigures";
-import { PerformanceMetrics } from "./PerformanceMetrics";
-import { GenerationHeatmap } from "./GenerationHeatmap";
-import { LifetimeTrend } from "./LifetimeTrend";
-import { DateRangeFilter } from "./DateRangeFilter";
+import { SummaryRow } from "./components/SummaryRow";
+import { InverterBarChart } from "./components/InverterBarChart";
+import { TrendChart } from "./components/TrendChart";
+import { ImpactFigures } from "./components/ImpactFigures";
+import { PerformanceMetrics } from "./components/PerformanceMetrics";
+import { GenerationHeatmap } from "./components/GenerationHeatmap";
+import { LifetimeTrend } from "./components/LifetimeTrend";
+import { DateRangeFilter } from "./components/DateRangeFilter";
 
 export default async function DashboardPage({
   searchParams,

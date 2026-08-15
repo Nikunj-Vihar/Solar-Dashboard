@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
-import { requestAccountAction, type AccountAction } from "./actions";
+import { requestAccountAction, type AccountAction } from "../actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

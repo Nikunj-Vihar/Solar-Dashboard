@@ -4,12 +4,12 @@ import { fetchPublicSitePayload, computePublicDashboardData } from "@/lib/data/p
 import { resolveDateRange } from "@/lib/calc/range";
 import { todayInTimezone } from "@/lib/date";
 import { formatRangeLabel } from "@/lib/format";
-import { SummaryRow } from "@/app/(app)/dashboard/SummaryRow";
-import { InverterBarChart } from "@/app/(app)/dashboard/InverterBarChart";
-import { TrendChart } from "@/app/(app)/dashboard/TrendChart";
-import { ImpactFigures } from "@/app/(app)/dashboard/ImpactFigures";
-import { PerformanceMetrics } from "@/app/(app)/dashboard/PerformanceMetrics";
-import { DateRangeFilter } from "@/app/(app)/dashboard/DateRangeFilter";
+import { SummaryRow } from "@/app/(app)/dashboard/components/SummaryRow";
+import { InverterBarChart } from "@/app/(app)/dashboard/components/InverterBarChart";
+import { TrendChart } from "@/app/(app)/dashboard/components/TrendChart";
+import { ImpactFigures } from "@/app/(app)/dashboard/components/ImpactFigures";
+import { PerformanceMetrics } from "@/app/(app)/dashboard/components/PerformanceMetrics";
+import { DateRangeFilter } from "@/app/(app)/dashboard/components/DateRangeFilter";
 
 export const metadata: Metadata = {
   title: "Shared dashboard — Solar Dashboard",

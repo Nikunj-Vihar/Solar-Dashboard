@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { confirmAccountAction, type AccountAction } from "../actions";
+import { confirmAccountAction, type AccountAction } from "../../actions";
 import { Button } from "@/components/ui/button";
 
 const LABEL: Record<AccountAction, string> = {

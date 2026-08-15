@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentSite } from "@/lib/data/site";
 import { getReadingsForDate, getLoggedDatesForSite, getSkyConditionForDate } from "@/lib/data/readings";
 import { todayInTimezone, addDays, isValidDateString } from "@/lib/date";
-import { LoggingForm } from "./LoggingForm";
+import { LoggingForm } from "./components/LoggingForm";
 
 export const metadata = {
   title: "Log readings — Solar Dashboard",

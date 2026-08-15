@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { getAuthedUser, getCurrentSite } from "@/lib/data/site";
-import { SiteNameCard } from "./SiteNameCard";
-import { ChangePasswordCard } from "./ChangePasswordCard";
-import { PublicShareCard } from "./PublicShareCard";
-import { InvertersCard } from "./InvertersCard";
-import { ReportSettingsCard } from "./ReportSettingsCard";
-import { DangerZoneCard } from "./DangerZoneCard";
+import { SiteNameCard } from "./components/SiteNameCard";
+import { ChangePasswordCard } from "./components/ChangePasswordCard";
+import { PublicShareCard } from "./components/PublicShareCard";
+import { InvertersCard } from "./components/InvertersCard";
+import { ReportSettingsCard } from "./components/ReportSettingsCard";
+import { DangerZoneCard } from "./components/DangerZoneCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 

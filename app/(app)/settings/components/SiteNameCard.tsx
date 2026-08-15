@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { updateSiteNameSchema, type UpdateSiteNameInput } from "@/lib/validation/schemas";
-import { updateSiteName } from "./actions";
+import { updateSiteName } from "../actions";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { inverterSchema, type InverterInput } from "@/lib/validation/schemas";
 
 type InverterFormValues = z.input<typeof inverterSchema>;
-import { addInverter, updateInverter, removeInverter } from "./actions";
+import { addInverter, updateInverter, removeInverter } from "../actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Sun } from "lucide-react";
 import { getAuthedUser, getCurrentSite } from "@/lib/data/site";
-import { DesktopNavIsland, MobileNavIsland } from "./nav-links";
+import { DesktopNavIsland, MobileNavIsland } from "./components/nav-links";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export default async function AppLayout({

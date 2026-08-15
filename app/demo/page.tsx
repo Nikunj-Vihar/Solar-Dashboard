@@ -5,13 +5,13 @@ import { getDemoDashboardData, DEMO_SITE, DEMO_INVERTERS } from "@/lib/demo-data
 import { computeHealthStatus, pickHealthReason } from "@/lib/calc/health";
 import { formatRangeLabel } from "@/lib/format";
 import { addDays } from "@/lib/date";
-import { SummaryRow } from "@/app/(app)/dashboard/SummaryRow";
-import { InverterBarChart } from "@/app/(app)/dashboard/InverterBarChart";
-import { TrendChart } from "@/app/(app)/dashboard/TrendChart";
-import { ImpactFigures } from "@/app/(app)/dashboard/ImpactFigures";
-import { PerformanceMetrics } from "@/app/(app)/dashboard/PerformanceMetrics";
-import { GenerationHeatmap } from "@/app/(app)/dashboard/GenerationHeatmap";
-import { LifetimeTrend } from "@/app/(app)/dashboard/LifetimeTrend";
+import { SummaryRow } from "@/app/(app)/dashboard/components/SummaryRow";
+import { InverterBarChart } from "@/app/(app)/dashboard/components/InverterBarChart";
+import { TrendChart } from "@/app/(app)/dashboard/components/TrendChart";
+import { ImpactFigures } from "@/app/(app)/dashboard/components/ImpactFigures";
+import { PerformanceMetrics } from "@/app/(app)/dashboard/components/PerformanceMetrics";
+import { GenerationHeatmap } from "@/app/(app)/dashboard/components/GenerationHeatmap";
+import { LifetimeTrend } from "@/app/(app)/dashboard/components/LifetimeTrend";
 
 export const dynamic = "force-static";
 

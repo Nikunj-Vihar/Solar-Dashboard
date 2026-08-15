@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
-import { updateReportFrequency, sendStatusEmailNow } from "./actions";
+import { updateReportFrequency, sendStatusEmailNow } from "../actions";
 import type { ReportFrequency } from "@/lib/validation/schemas";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

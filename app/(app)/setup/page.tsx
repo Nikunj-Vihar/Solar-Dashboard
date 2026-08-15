@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentSite } from "@/lib/data/site";
-import { SetupWizard } from "./SetupWizard";
+import { SetupWizard } from "./components/SetupWizard";
 
 export const metadata = {
   title: "Set up your site — Solar Dashboard",

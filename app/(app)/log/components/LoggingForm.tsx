@@ -14,7 +14,7 @@ import {
   type DailyLogInput,
   type SkyCondition,
 } from "@/lib/validation/schemas";
-import { submitDailyLog, deleteDailyReading } from "./actions";
+import { submitDailyLog, deleteDailyReading } from "../actions";
 import { checkCumulativeAndCrossCheck, type CrossCheckResult } from "@/lib/validation/readings";
 import { addDays } from "@/lib/date";
 import { LogCalendar } from "./LogCalendar";

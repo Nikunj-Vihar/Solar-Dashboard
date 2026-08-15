@@ -1,6 +1,6 @@
 import { AlertOctagon } from "lucide-react";
 import { getPendingAccountAction } from "@/lib/data/site";
-import { ConfirmActionButton } from "./ConfirmActionButton";
+import { ConfirmActionButton } from "./components/ConfirmActionButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
