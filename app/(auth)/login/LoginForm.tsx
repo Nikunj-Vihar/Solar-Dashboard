@@ -13,6 +13,7 @@ import {
 } from "@/lib/validation/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/PasswordInput";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -60,9 +61,8 @@ function SignInPanel() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="signin-password">Password</Label>
-        <Input
+        <PasswordInput
           id="signin-password"
-          type="password"
           autoComplete="current-password"
           {...register("password")}
         />
@@ -142,9 +142,8 @@ function SignUpPanel() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="signup-password">Password</Label>
-        <Input
+        <PasswordInput
           id="signup-password"
-          type="password"
           autoComplete="new-password"
           {...register("password")}
         />
@@ -154,9 +153,8 @@ function SignUpPanel() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="signup-confirm">Confirm password</Label>
-        <Input
+        <PasswordInput
           id="signup-confirm"
-          type="password"
           autoComplete="new-password"
           {...register("confirmPassword")}
         />
