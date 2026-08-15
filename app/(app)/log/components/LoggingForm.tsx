@@ -268,60 +268,6 @@ export function LoggingForm({
 
   const isToday = date === today;
 
-  // Nudges the user, once they land on today's entry, about earlier days
-  // this month that were never logged or explicitly marked "no reading" --
-  // only compares against dates on record at all, so a brand-new site's
-  // pre-setup days are never flagged as "missed."
-  const missedDatesThisMonth = useMemo(() => {
-    if (!isToday) return [];
-    const touchedDates = [...loggedDatesSet, ...skippedDatesSet];
-    if (touchedDates.length === 0) return [];
-    const earliestDate = touchedDates.reduce((min, d) => (d < min ? d : min));
-    const monthStart = `${today.slice(0, 7)}-01`;
-    const startDate = monthStart > earliestDate ? monthStart : earliestDate;
-    const yesterday = addDays(today, -1);
-    const missed: string[] = [];
-    for (let d = startDate; d <= yesterday; d = addDays(d, 1)) {
-      if (!loggedDatesSet.has(d) && !skippedDatesSet.has(d)) missed.push(d);
-    }
-    return missed;
-  }, [isToday, loggedDatesSet, skippedDatesSet, today]);
-
-  useEffect(() => {
-    const id = "missed-days-alert";
-    if (missedDatesThisMonth.length === 0) {
-      toast.dismiss(id);
-      return;
-    }
-    const MAX_SHOWN = 6;
-    const format = (d: string) =>
-      new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    const shown = missedDatesThisMonth.slice(0, MAX_SHOWN).map(format).join(", ");
-    const extra =
-      missedDatesThisMonth.length > MAX_SHOWN ? ` +${missedDatesThisMonth.length - MAX_SHOWN} more` : "";
-    toast.warning(
-      missedDatesThisMonth.length === 1
-        ? "You missed a day this month"
-        : `You missed ${missedDatesThisMonth.length} days this month`,
-      {
-        id,
-        description: shown + extra,
-        position: "top-left",
-        duration: Infinity,
-        closeButton: true,
-      },
-    );
-  }, [missedDatesThisMonth]);
-
-  // Clears the alert if the user navigates away from the Log page entirely
-  // (it's re-derived from fresh props on every landing, so no need to keep
-  // it alive past this component's lifetime).
-  useEffect(() => {
-    return () => {
-      toast.dismiss("missed-days-alert");
-    };
-  }, []);
-
   async function handleDelete(inverterId: string) {
     const result = await deleteDailyReading(inverterId, date);
     if (!result.ok) {

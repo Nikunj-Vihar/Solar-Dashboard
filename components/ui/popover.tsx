@@ -36,11 +36,12 @@ function PopoverContent({
   className,
   children,
   sideOffset = 8,
+  align,
   ...props
-}: PopoverPrimitive.Popup.Props & { sideOffset?: number }) {
+}: PopoverPrimitive.Popup.Props & { sideOffset?: number; align?: PopoverPrimitive.Positioner.Props["align"] }) {
   return (
     <PopoverPortal>
-      <PopoverPositioner sideOffset={sideOffset}>
+      <PopoverPositioner sideOffset={sideOffset} align={align}>
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(

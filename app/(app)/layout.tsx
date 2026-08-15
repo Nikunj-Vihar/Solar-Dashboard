@@ -2,7 +2,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Sun } from "lucide-react";
 import { getAuthedUser, getCurrentSite } from "@/lib/data/site";
+import { getLoggedDatesForSite } from "@/lib/data/readings";
+import { getMissedDatesThisMonth } from "@/lib/calc/missedDates";
+import { todayInTimezone } from "@/lib/date";
 import { DesktopNavIsland, MobileNavIsland } from "./components/nav-links";
+import { NotificationBell } from "./components/NotificationBell";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export default async function AppLayout({
@@ -16,6 +20,15 @@ export default async function AppLayout({
   }
 
   const site = await getCurrentSite();
+  let missedDates: string[] = [];
+  if (site) {
+    const { logged, skipped } = await getLoggedDatesForSite(site.id);
+    missedDates = getMissedDatesThisMonth({
+      loggedDates: logged,
+      skippedDates: skipped,
+      today: todayInTimezone(site.timezone),
+    });
+  }
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -37,7 +50,8 @@ export default async function AppLayout({
             <span className="truncate">{site?.name ?? "Solar Dashboard"}</span>
           </Link>
           <div className="justify-self-center">{site && <DesktopNavIsland />}</div>
-          <div className="justify-self-end">
+          <div className="flex items-center gap-1 justify-self-end">
+            {site && <NotificationBell missedDates={missedDates} />}
             <SignOutButton />
           </div>
         </div>
