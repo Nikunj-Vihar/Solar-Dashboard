@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Loader2, AlertTriangle, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   dailyLogSchema,
@@ -19,6 +19,7 @@ import { checkCumulativeAndCrossCheck, type CrossCheckResult } from "@/lib/valid
 import { getMissedDatesThisMonth } from "@/lib/calc/missedDates";
 import { addDays } from "@/lib/date";
 import { LogCalendar } from "./LogCalendar";
+import { WeekStrip } from "./WeekStrip";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -151,6 +152,7 @@ export function LoggingForm({
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [editingIds, setEditingIds] = useState<Set<string>>(new Set());
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const loggedDatesSet = useMemo(() => new Set(loggedDates), [loggedDates]);
   const skippedDatesSet = useMemo(() => new Set(skippedDates), [skippedDates]);
   // Same isPending-driven fade already used for the dashboard's trend-chart
@@ -381,14 +383,46 @@ export function LoggingForm({
           </Button>
         </div>
 
-        <Input
-          type="date"
-          value={date}
-          max={today}
-          onChange={(e) => e.target.value && goToDate(e.target.value)}
-          aria-label="Jump to date"
-          className="mb-4 md:hidden"
-        />
+        <div className="mb-4 flex items-center gap-2 md:hidden">
+          <WeekStrip
+            selectedDate={date}
+            today={today}
+            loggedDates={loggedDatesSet}
+            skippedDates={skippedDatesSet}
+            onSelect={goToDate}
+          />
+          <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <DialogTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Pick a different date"
+                  nativeButton
+                />
+              }
+            >
+              <CalendarDays className="size-4" />
+            </DialogTrigger>
+            <DialogContent className="max-w-xs">
+              <DialogHeader>
+                <DialogTitle>Select a date</DialogTitle>
+              </DialogHeader>
+              <LogCalendar
+                bare
+                selectedDate={date}
+                today={today}
+                loggedDates={loggedDatesSet}
+                skippedDates={skippedDatesSet}
+                onSelect={(d) => {
+                  goToDate(d);
+                  setCalendarOpen(false);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
 
         <Card className="mb-3">
           <CardContent className="grid grid-cols-2 gap-3 py-4">
