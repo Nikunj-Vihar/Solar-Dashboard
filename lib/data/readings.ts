@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import type { SkyCondition } from "@/lib/validation/schemas";
 
 export type ExistingReading = {
   inverter_id: string;
@@ -45,4 +46,20 @@ export async function getLoggedDatesForSite(siteId: string): Promise<LoggedDates
   }
   const skipped = new Set([...touched].filter((d) => !logged.has(d)));
   return { logged, skipped };
+}
+
+export type ExistingSkyCondition = { skyCondition: SkyCondition; note: string | null };
+
+export async function getSkyConditionForDate(
+  siteId: string,
+  date: string,
+): Promise<ExistingSkyCondition | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("daily_sky_conditions")
+    .select("sky_condition, note")
+    .eq("site_id", siteId)
+    .eq("reading_date", date)
+    .maybeSingle();
+  return data ? { skyCondition: data.sky_condition as SkyCondition, note: data.note } : null;
 }

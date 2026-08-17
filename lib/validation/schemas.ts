@@ -99,9 +99,40 @@ export const readingEntrySchema = z
   });
 export type ReadingEntryInput = z.output<typeof readingEntrySchema>;
 
+// A quick categorical pick, not a number the client can't accurately measure
+// without on-site equipment (no thermometer/rain gauge/pyranometer).
+export const SKY_CONDITIONS = [
+  "clear",
+  "partly_cloudy",
+  "mostly_cloudy",
+  "overcast",
+  "light_rain",
+  "heavy_rain_storm",
+  "hazy_dusty",
+  "foggy",
+] as const;
+export const skyConditionSchema = z.enum(SKY_CONDITIONS);
+export type SkyCondition = z.infer<typeof skyConditionSchema>;
+
+export const SKY_CONDITION_LABELS: Record<SkyCondition, string> = {
+  clear: "Clear",
+  partly_cloudy: "Partly Cloudy",
+  mostly_cloudy: "Mostly Cloudy",
+  overcast: "Overcast",
+  light_rain: "Light Rain",
+  heavy_rain_storm: "Heavy Rain / Storm",
+  hazy_dusty: "Hazy / Dusty",
+  foggy: "Foggy",
+};
+
 export const dailyLogSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
   readings: z.array(readingEntrySchema).min(1),
+  // Site-level, not per-inverter -- weather is one condition for the whole
+  // plant, not a property of a specific inverter. Optional since logging a
+  // reading shouldn't ever block on the weather field.
+  skyCondition: skyConditionSchema.optional(),
+  weatherNote: z.string().max(200).optional().or(z.literal("")),
 });
 export type DailyLogFormValues = z.input<typeof dailyLogSchema>;
 export type DailyLogInput = z.output<typeof dailyLogSchema>;
