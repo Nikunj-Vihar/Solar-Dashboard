@@ -59,6 +59,8 @@ export default function DemoPage() {
 
       <main className="mx-auto max-w-5xl space-y-4 p-4">
         <SummaryRow
+          rangeKwh={data.rangeKwh}
+          rangeExpectedMidKwh={data.rangeExpectedMidKwh}
           rangeAvgPerDayKwh={data.rangeKwh}
           lifetimeKwh={data.lifetimeKwh}
           healthStatus={healthStatus}

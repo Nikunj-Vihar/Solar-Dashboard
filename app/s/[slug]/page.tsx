@@ -68,6 +68,8 @@ export default async function PublicDashboardPage({
         </div>
 
         <SummaryRow
+          rangeKwh={dashboard.rangeKwh}
+          rangeExpectedMidKwh={dashboard.rangeExpectedMidKwh}
           rangeAvgPerDayKwh={rangeAvgPerDayKwh}
           lifetimeKwh={dashboard.lifetimeKwh}
           healthStatus={dashboard.healthStatus}
