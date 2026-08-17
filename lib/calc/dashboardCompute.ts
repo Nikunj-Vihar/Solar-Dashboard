@@ -1,5 +1,5 @@
 import { computeRangeSummary } from "./range";
-import { shiftYears } from "@/lib/date";
+import { shiftMonths, shiftYears } from "@/lib/date";
 
 export type RawReadingRow = {
   reading_date: string;
@@ -14,6 +14,7 @@ export type RangeFields = {
   rangeKwh: number;
   rangeDaysWithData: number;
   rangeTotalDays: number;
+  rangeLastMonthKwh: number | null;
   rangeLastYearKwh: number | null;
   rangeIsSingleDay: boolean;
   perInverterRange: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
@@ -63,9 +64,16 @@ export function computeRangeFields(
   const allReadings = rows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh }));
   const rangeSummary = computeRangeSummary(allReadings, range.from, range.to);
 
-  // Same exact date range, shifted back one calendar year, summed from the
-  // site's own actual readings -- null (not zero) rather than a fabricated
-  // comparison when there's simply no data that far back yet.
+  // Same exact date range, shifted back one calendar month/year, summed from
+  // the site's own actual readings -- null (not zero) rather than a
+  // fabricated comparison when there's simply no data that far back yet.
+  const lastMonthFrom = shiftMonths(range.from, -1);
+  const lastMonthTo = shiftMonths(range.to, -1);
+  const lastMonthKwhValues = realKwh(
+    rows.filter((r) => r.reading_date >= lastMonthFrom && r.reading_date <= lastMonthTo),
+  );
+  const rangeLastMonthKwh = lastMonthKwhValues.length > 0 ? sum(lastMonthKwhValues) : null;
+
   const lastYearFrom = shiftYears(range.from, -1);
   const lastYearTo = shiftYears(range.to, -1);
   const lastYearKwhValues = realKwh(
@@ -77,6 +85,7 @@ export function computeRangeFields(
     rangeKwh: rangeSummary.actualKwh,
     rangeDaysWithData: rangeSummary.daysWithData,
     rangeTotalDays: rangeSummary.totalDays,
+    rangeLastMonthKwh,
     rangeLastYearKwh,
     rangeIsSingleDay,
     perInverterRange,

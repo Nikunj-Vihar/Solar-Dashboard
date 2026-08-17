@@ -30,12 +30,11 @@ export function computeRangeSummary(
   return { actualKwh: round2(actualKwh), daysWithData, totalDays: dense.length };
 }
 
-/** Matches the trend chart's old fixed "day" window, so a first-time visitor sees the same thing as before. */
-const DEFAULT_RANGE_DAYS = 30;
+const DEFAULT_RANGE_DAYS = 7;
 
 /**
  * Validates and clamps ?from=/?to= search params into a safe range. With no
- * params at all (a fresh page load), defaults to the last 30 days rather
+ * params at all (a fresh page load), defaults to the last 7 days rather
  * than just today -- several charts need more than a single day of data to
  * render anything meaningful. Once the user has picked *something*, though,
  * an individually missing/malformed field falls back to today rather than

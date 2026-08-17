@@ -30,9 +30,9 @@ describe("computeRangeSummary", () => {
 describe("resolveDateRange", () => {
   const today = "2026-07-15";
 
-  it("defaults to the last 30 days when both params are missing", () => {
+  it("defaults to the last 7 days when both params are missing", () => {
     expect(resolveDateRange(undefined, undefined, today)).toEqual({
-      from: "2026-06-16",
+      from: "2026-07-09",
       to: today,
     });
   });

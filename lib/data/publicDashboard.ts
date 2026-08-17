@@ -32,6 +32,7 @@ export type PublicDashboardData = {
   rangeKwh: number;
   rangeTotalDays: number;
   lifetimeKwh: number;
+  rangeLastMonthKwh: number | null;
   rangeLastYearKwh: number | null;
   rangeIsSingleDay: boolean;
   perInverterRange: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
@@ -76,6 +77,7 @@ export function computePublicDashboardData(
     rangeKwh: rangeFields.rangeKwh,
     rangeTotalDays: rangeFields.rangeTotalDays,
     lifetimeKwh: rangeFields.lifetimeKwh,
+    rangeLastMonthKwh: rangeFields.rangeLastMonthKwh,
     rangeLastYearKwh: rangeFields.rangeLastYearKwh,
     rangeIsSingleDay: rangeFields.rangeIsSingleDay,
     perInverterRange: rangeFields.perInverterRange,

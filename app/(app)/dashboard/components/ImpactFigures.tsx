@@ -6,21 +6,21 @@ import { formatInr, formatKwh, formatPercent } from "@/lib/format";
 
 export function ImpactFigures({
   rangeKwh,
-  rangeLastYearKwh,
+  rangeLastMonthKwh,
   rangeLabel,
   tariffRateInrPerKwh,
   gridEmissionFactorKgPerKwh,
 }: {
   rangeKwh: number;
-  rangeLastYearKwh: number | null;
+  rangeLastMonthKwh: number | null;
   rangeLabel: string;
   tariffRateInrPerKwh: number | null;
   gridEmissionFactorKgPerKwh: number;
 }) {
   const rupeeSaved = computeRupeeSaved(rangeKwh, tariffRateInrPerKwh);
   const co2OffsetKg = computeCo2OffsetKg(rangeKwh, gridEmissionFactorKgPerKwh);
-  const vsLastYear =
-    rangeLastYearKwh !== null ? computeVsBaselinePercent(rangeKwh, rangeLastYearKwh) : null;
+  const vsLastMonth =
+    rangeLastMonthKwh !== null ? computeVsBaselinePercent(rangeKwh, rangeLastMonthKwh) : null;
 
   return (
     <>
@@ -38,25 +38,25 @@ export function ImpactFigures({
                   certified figure — change your tariff rate in Settings if it&apos;s out of date.
                 </p>
                 <p className="mt-2">
-                  &quot;vs. last year&quot; compares actual generation in the selected period to
-                  this same date range, one year earlier, from your site&apos;s own logged
-                  readings — only shown once a full year of history exists.
+                  &quot;vs. last month&quot; compares actual generation in the selected period to
+                  this same date range, one month earlier, from your site&apos;s own logged
+                  readings.
                 </p>
               </InfoTooltip>
             </p>
             <p className="mt-1 text-2xl font-semibold">{formatInr(rupeeSaved)}</p>
-            {vsLastYear !== null && (
+            {vsLastMonth !== null && (
               <p
                 className={`mt-1 flex items-center gap-1 text-sm ${
-                  vsLastYear >= 0 ? "text-(--viz-status-good)" : "text-muted-foreground"
+                  vsLastMonth >= 0 ? "text-(--viz-status-good)" : "text-muted-foreground"
                 }`}
               >
-                {vsLastYear >= 0 ? (
+                {vsLastMonth >= 0 ? (
                   <TrendingUp className="size-3.5" />
                 ) : (
                   <TrendingDown className="size-3.5" />
                 )}
-                {formatPercent(vsLastYear, { showSign: true })} vs. last year for {rangeLabel}
+                {formatPercent(vsLastMonth, { showSign: true })} vs. last month for {rangeLabel}
               </p>
             )}
           </CardContent>

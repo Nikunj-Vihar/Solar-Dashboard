@@ -26,12 +26,20 @@ export function startOfMonth(dateStr: string): string {
   return `${dateStr.slice(0, 7)}-01`;
 }
 
+/** Shifts by whole calendar months, clamping to the last valid day of the target month (e.g. Jan 31 - 1mo -> Dec 31, Mar 31 - 1mo -> Feb 28/29). */
+export function shiftMonths(dateStr: string, months: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const totalMonths = y * 12 + (m - 1) + months;
+  const targetYear = Math.floor(totalMonths / 12);
+  const targetMonth = ((totalMonths % 12) + 12) % 12; // 0-11, safe for a negative shift
+  const daysInTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const clampedDay = Math.min(d, daysInTargetMonth);
+  return new Date(Date.UTC(targetYear, targetMonth, clampedDay)).toISOString().slice(0, 10);
+}
+
 /** Shifts by whole calendar years, clamping Feb 29 to Feb 28 in a non-leap target year. */
 export function shiftYears(dateStr: string, years: number): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const daysInTargetMonth = new Date(Date.UTC(y + years, m, 0)).getUTCDate();
-  const clampedDay = Math.min(d, daysInTargetMonth);
-  return new Date(Date.UTC(y + years, m - 1, clampedDay)).toISOString().slice(0, 10);
+  return shiftMonths(dateStr, years * 12);
 }
 
 /** Inclusive day count between two YYYY-MM-DD strings (toDate - fromDate, in days, plus one). */

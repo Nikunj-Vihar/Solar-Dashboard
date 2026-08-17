@@ -69,6 +69,7 @@ export default async function PublicDashboardPage({
 
         <SummaryRow
           rangeKwh={dashboard.rangeKwh}
+          rangeLastMonthKwh={dashboard.rangeLastMonthKwh}
           rangeLastYearKwh={dashboard.rangeLastYearKwh}
           rangeAvgPerDayKwh={rangeAvgPerDayKwh}
           lifetimeKwh={dashboard.lifetimeKwh}
@@ -83,7 +84,7 @@ export default async function PublicDashboardPage({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ImpactFigures
             rangeKwh={dashboard.rangeKwh}
-            rangeLastYearKwh={dashboard.rangeLastYearKwh}
+            rangeLastMonthKwh={dashboard.rangeLastMonthKwh}
             rangeLabel={rangeLabel}
             tariffRateInrPerKwh={dashboard.tariffRateInrPerKwh}
             gridEmissionFactorKgPerKwh={dashboard.gridEmissionFactorKgPerKwh}

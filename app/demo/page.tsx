@@ -60,6 +60,7 @@ export default function DemoPage() {
       <main className="mx-auto max-w-5xl space-y-4 p-4">
         <SummaryRow
           rangeKwh={data.rangeKwh}
+          rangeLastMonthKwh={data.rangeLastMonthKwh}
           rangeLastYearKwh={data.rangeLastYearKwh}
           rangeAvgPerDayKwh={data.rangeKwh}
           lifetimeKwh={data.lifetimeKwh}
@@ -71,7 +72,7 @@ export default function DemoPage() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ImpactFigures
             rangeKwh={data.rangeKwh}
-            rangeLastYearKwh={data.rangeLastYearKwh}
+            rangeLastMonthKwh={data.rangeLastMonthKwh}
             rangeLabel={rangeLabel}
             tariffRateInrPerKwh={DEMO_SITE.tariffRateInrPerKwh}
             gridEmissionFactorKgPerKwh={DEMO_SITE.gridEmissionFactorKgPerKwh}

@@ -14,6 +14,7 @@ export type DashboardData = {
   rangeKwh: number;
   rangeDaysWithData: number;
   rangeTotalDays: number;
+  rangeLastMonthKwh: number | null;
   rangeLastYearKwh: number | null;
   rangeIsSingleDay: boolean;
   perInverterRange: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
@@ -70,6 +71,7 @@ export async function getDashboardData(
     rangeKwh: rangeFields.rangeKwh,
     rangeDaysWithData: rangeFields.rangeDaysWithData,
     rangeTotalDays: rangeFields.rangeTotalDays,
+    rangeLastMonthKwh: rangeFields.rangeLastMonthKwh,
     rangeLastYearKwh: rangeFields.rangeLastYearKwh,
     rangeIsSingleDay: rangeFields.rangeIsSingleDay,
     perInverterRange: rangeFields.perInverterRange,

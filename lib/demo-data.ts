@@ -6,7 +6,7 @@
  * (scripts/generate-sample-pdf.ts), so nothing here may import "server-only"
  * or the Supabase client.
  */
-import { todayInTimezone, addDays } from "@/lib/date";
+import { todayInTimezone, addDays, shiftMonths } from "@/lib/date";
 import { computeRangeSummary } from "@/lib/calc/range";
 
 export const DEMO_SITE = {
@@ -34,6 +34,7 @@ export type DemoDashboardData = {
   rangeKwh: number;
   rangeDaysWithData: number;
   rangeTotalDays: number;
+  rangeLastMonthKwh: number | null;
   rangeLastYearKwh: number | null;
   perInverterRange: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
   allReadings: { date: string; kwh: number }[];
@@ -102,6 +103,12 @@ export function getDemoDashboardData(): DemoDashboardData {
   const allReadings = readings.map((r) => ({ date: r.date, kwh: r.kwh }));
   const rangeSummary = computeRangeSummary(allReadings, today, today);
 
+  // A month back is well within the 90-day synthetic window, so this is a
+  // real computed comparison (unlike rangeLastYearKwh below) -- same as what
+  // a real site with a month or so of history would actually see.
+  const lastMonthDay = shiftMonths(today, -1);
+  const rangeLastMonthSummary = computeRangeSummary(allReadings, lastMonthDay, lastMonthDay);
+
   const lastMissingDay = addDays(today, -Math.min(...MISSING_READING_GAP_DAYS_AGO));
 
   return {
@@ -112,7 +119,9 @@ export function getDemoDashboardData(): DemoDashboardData {
     rangeKwh: rangeSummary.actualKwh,
     rangeDaysWithData: rangeSummary.daysWithData,
     rangeTotalDays: rangeSummary.totalDays,
-    // The demo's fixed 90-day window has no year-ago data either -- same
+    rangeLastMonthKwh:
+      rangeLastMonthSummary.daysWithData > 0 ? rangeLastMonthSummary.actualKwh : null,
+    // The demo's fixed 90-day window has no year-ago data though -- same
     // honest "—" a brand-new real site would show, nothing to fake here.
     rangeLastYearKwh: null,
     perInverterRange,

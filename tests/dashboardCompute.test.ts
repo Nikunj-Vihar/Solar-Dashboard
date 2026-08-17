@@ -69,6 +69,37 @@ describe("computeRangeFields", () => {
     });
   });
 
+  describe("rangeLastMonthKwh", () => {
+    it("is null when there's no data in the month-ago window", () => {
+      const rows: RawReadingRow[] = [
+        { reading_date: "2026-02-01", inverter_id: "inv-1", daily_kwh: 10, no_reading: false },
+      ];
+      const result = computeRangeFields(rows, inverters, { from: "2026-02-01", to: "2026-02-01" });
+      expect(result.rangeLastMonthKwh).toBeNull();
+    });
+
+    it("sums real readings from this exact date range one month earlier", () => {
+      const rows: RawReadingRow[] = [
+        { reading_date: "2026-02-01", inverter_id: "inv-1", daily_kwh: 10, no_reading: false },
+        { reading_date: "2026-01-01", inverter_id: "inv-1", daily_kwh: 8, no_reading: false },
+        { reading_date: "2026-01-02", inverter_id: "inv-1", daily_kwh: 9, no_reading: false },
+        // Outside the shifted window -- should not be included.
+        { reading_date: "2026-01-03", inverter_id: "inv-1", daily_kwh: 100, no_reading: false },
+      ];
+      const result = computeRangeFields(rows, inverters, { from: "2026-02-01", to: "2026-02-02" });
+      expect(result.rangeLastMonthKwh).toBe(17);
+    });
+
+    it("excludes no_reading rows from the month-ago window instead of counting them as zero", () => {
+      const rows: RawReadingRow[] = [
+        { reading_date: "2026-02-01", inverter_id: "inv-1", daily_kwh: 10, no_reading: false },
+        { reading_date: "2026-01-01", inverter_id: "inv-1", daily_kwh: null, no_reading: true },
+      ];
+      const result = computeRangeFields(rows, inverters, { from: "2026-02-01", to: "2026-02-01" });
+      expect(result.rangeLastMonthKwh).toBeNull();
+    });
+  });
+
   describe("rangeLastYearKwh", () => {
     it("is null when there's no data in the year-ago window", () => {
       const rows: RawReadingRow[] = [
