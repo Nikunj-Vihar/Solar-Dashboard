@@ -1,9 +1,8 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { todayInTimezone, addDays } from "@/lib/date";
+import { todayInTimezone } from "@/lib/date";
 import { getLoggedDatesForSite } from "./readings";
 import { getMissedDatesThisMonth } from "@/lib/calc/missedDates";
-import { RECENT_BASELINE_DEVIATION_DAYS } from "@/lib/calc/health";
 import type { SiteWithInverters } from "./site";
 
 export type NotificationItem = {
@@ -32,9 +31,6 @@ export async function getNotificationsForSite(site: SiteWithInverters): Promise<
       .select("id, message, severity")
       .eq("site_id", site.id)
       .eq("is_resolved", false)
-      .or(
-        `alert_type.neq.baseline_deviation,reading_date.gte.${addDays(today, -RECENT_BASELINE_DEVIATION_DAYS)}`,
-      )
       .order("created_at", { ascending: false }),
     supabase.from("dismissed_notifications").select("notification_id").eq("site_id", site.id),
   ]);

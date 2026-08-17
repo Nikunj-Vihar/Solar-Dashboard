@@ -4,8 +4,6 @@ import { randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthedUser } from "@/lib/data/site";
 import { setupSchema, type SetupInput } from "@/lib/validation/schemas";
-import { fetchMonthlyIrradiance } from "@/lib/baseline/nasaPower";
-import { computeMonthlyBaseline } from "@/lib/baseline/computeBaseline";
 
 export type CompleteSetupResult =
   | { ok: true }
@@ -71,33 +69,6 @@ export async function completeSetup(input: SetupInput): Promise<CompleteSetupRes
   if (inverterError || !inverterRows) {
     await supabase.from("sites").delete().eq("id", siteRow.id);
     return { ok: false, error: inverterError?.message ?? "Could not create inverters." };
-  }
-
-  try {
-    const totalDcCapacityKwp = inverters.reduce((sum, inv) => sum + inv.dcCapacityKwp, 0);
-    const irradiance = await fetchMonthlyIrradiance(site.latitude, site.longitude);
-    const baseline = computeMonthlyBaseline(irradiance, totalDcCapacityKwp);
-
-    const { error: baselineError } = await supabase.from("expected_baseline_monthly").insert(
-      baseline.map((b) => ({
-        site_id: siteRow.id,
-        month: b.month,
-        avg_daily_irradiance_kwh_per_m2: b.avgDailyIrradianceKwhPerM2,
-        expected_daily_kwh_low: b.expectedDailyKwhLow,
-        expected_daily_kwh_mid: b.expectedDailyKwhMid,
-        expected_daily_kwh_high: b.expectedDailyKwhHigh,
-      })),
-    );
-    if (baselineError) throw new Error(baselineError.message);
-  } catch (err) {
-    // Roll back so /setup can be retried cleanly instead of leaving an
-    // orphaned site with no baseline data.
-    await supabase.from("sites").delete().eq("id", siteRow.id);
-    const message = err instanceof Error ? err.message : "Could not fetch solar data.";
-    return {
-      ok: false,
-      error: `${message} Double-check the coordinates and try again.`,
-    };
   }
 
   return { ok: true };

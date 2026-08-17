@@ -6,21 +6,21 @@ import { formatInr, formatKwh, formatPercent } from "@/lib/format";
 
 export function ImpactFigures({
   rangeKwh,
-  rangeExpectedMidKwh,
+  rangeLastYearKwh,
   rangeLabel,
   tariffRateInrPerKwh,
   gridEmissionFactorKgPerKwh,
 }: {
   rangeKwh: number;
-  rangeExpectedMidKwh: number | null;
+  rangeLastYearKwh: number | null;
   rangeLabel: string;
   tariffRateInrPerKwh: number | null;
   gridEmissionFactorKgPerKwh: number;
 }) {
   const rupeeSaved = computeRupeeSaved(rangeKwh, tariffRateInrPerKwh);
   const co2OffsetKg = computeCo2OffsetKg(rangeKwh, gridEmissionFactorKgPerKwh);
-  const vsBaseline =
-    rangeExpectedMidKwh !== null ? computeVsBaselinePercent(rangeKwh, rangeExpectedMidKwh) : null;
+  const vsLastYear =
+    rangeLastYearKwh !== null ? computeVsBaselinePercent(rangeKwh, rangeLastYearKwh) : null;
 
   return (
     <>
@@ -38,25 +38,25 @@ export function ImpactFigures({
                   certified figure — change your tariff rate in Settings if it&apos;s out of date.
                 </p>
                 <p className="mt-2">
-                  &quot;vs. expected&quot; compares actual generation to a baseline computed from
-                  your site&apos;s solar irradiance (via NASA&apos;s POWER dataset) and installed
-                  capacity.
+                  &quot;vs. last year&quot; compares actual generation in the selected period to
+                  this same date range, one year earlier, from your site&apos;s own logged
+                  readings — only shown once a full year of history exists.
                 </p>
               </InfoTooltip>
             </p>
             <p className="mt-1 text-2xl font-semibold">{formatInr(rupeeSaved)}</p>
-            {vsBaseline !== null && (
+            {vsLastYear !== null && (
               <p
                 className={`mt-1 flex items-center gap-1 text-sm ${
-                  vsBaseline >= 0 ? "text-(--viz-status-good)" : "text-muted-foreground"
+                  vsLastYear >= 0 ? "text-(--viz-status-good)" : "text-muted-foreground"
                 }`}
               >
-                {vsBaseline >= 0 ? (
+                {vsLastYear >= 0 ? (
                   <TrendingUp className="size-3.5" />
                 ) : (
                   <TrendingDown className="size-3.5" />
                 )}
-                {formatPercent(vsBaseline, { showSign: true })} vs. expected for {rangeLabel}
+                {formatPercent(vsLastYear, { showSign: true })} vs. last year for {rangeLabel}
               </p>
             )}
           </CardContent>

@@ -1,16 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { computeHealthStatus, filterActiveAlerts } from "@/lib/calc/health";
+import { computeHealthStatus } from "@/lib/calc/health";
 
-type ActiveAlertShape = {
-  alertType: string;
-  readingDate: string;
-  severity: "watch" | "needs_attention";
-};
-
-// Verifies spec §10.3 against the real Postgres functions (refresh_alerts,
-// check_daily_baseline_deviation) in supabase/migrations/0005_alerts_and_cron.sql —
-// these can't be unit tested since the logic lives in the database, not in TS.
+// Verifies the real Postgres functions (refresh_alerts, get_public_dashboard)
+// in supabase/migrations/0005_alerts_and_cron.sql and
+// 0017_self_referential_baseline.sql -- these can't be unit tested since the
+// logic lives in the database, not in TS.
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -26,13 +21,13 @@ function daysAgo(n: number): Date {
   return d;
 }
 
-describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation)", () => {
+describeIfLive("alert generation (refresh_alerts, get_public_dashboard)", () => {
   let admin: SupabaseClient;
   let userId: string;
   let siteId: string;
   let inverterIds: string[];
 
-  /** Creates a fresh confirmed test user + 4-inverter site, with a flat baseline. */
+  /** Creates a fresh confirmed test user + 4-inverter site. */
   async function seedSite(label: string) {
     const { data: user, error: userErr } = await admin.auth.admin.createUser({
       email: `alerts-test-${label}-${Date.now()}@example.com`,
@@ -67,18 +62,6 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
       )
       .select();
     if (invErr) throw invErr;
-
-    const { error: baselineErr } = await admin.from("expected_baseline_monthly").insert(
-      Array.from({ length: 12 }, (_, i) => ({
-        site_id: site.id,
-        month: i + 1,
-        avg_daily_irradiance_kwh_per_m2: 5,
-        expected_daily_kwh_low: 85,
-        expected_daily_kwh_mid: 100,
-        expected_daily_kwh_high: 115,
-      })),
-    );
-    if (baselineErr) throw baselineErr;
 
     return { userId: newUserId, siteId: site.id as string, inverterIds: inverters.map((i) => i.id as string) };
   }
@@ -175,7 +158,7 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
       .from("alerts")
       .select("id")
       .eq("site_id", site2.siteId)
-      .eq("alert_type", "underperformance")
+      .in("alert_type", ["underperformance", "site_underperformance"])
       .eq("is_resolved", false);
     if (error) throw error;
 
@@ -184,7 +167,7 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
     await cleanupSite(site2.userId);
   });
 
-  it("a no_reading entry resolves the missing-reading alert without faking a baseline deviation", async () => {
+  it("a no_reading entry resolves the missing-reading alert", async () => {
     const site5 = await seedSite("noreading");
 
     // Stale for 4 days -> missing_reading should fire for every inverter.
@@ -236,23 +219,6 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
     if (afterErr) throw afterErr;
     expect(afterMissing).toEqual([]);
 
-    // A day where every inverter is no_reading has zero real generation to
-    // compare against the baseline -- it should be skipped, not flagged as
-    // "100% below baseline".
-    const { error: baselineErr } = await admin.rpc("check_daily_baseline_deviation", {
-      p_site_id: site5.siteId,
-      p_reading_date: today,
-    });
-    if (baselineErr) throw baselineErr;
-    const { data: deviationAlerts, error: devErr } = await admin
-      .from("alerts")
-      .select("id")
-      .eq("site_id", site5.siteId)
-      .eq("alert_type", "baseline_deviation")
-      .eq("is_resolved", false);
-    if (devErr) throw devErr;
-    expect(deviationAlerts).toEqual([]);
-
     await cleanupSite(site5.userId);
   });
 
@@ -291,48 +257,59 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
     await cleanupSite(site4.userId);
   });
 
-  it("flags a site-wide baseline deviation and resolves it once corrected", async () => {
-    const site3 = await seedSite("baseline");
-    const date = ymd(daysAgo(0));
+  it("flags a site-wide underperformance drop and resolves it once corrected", async () => {
+    const site3 = await seedSite("site-underperf");
 
-    // Total = 4 * 10 = 40 kWh, vs expected 100 -> 60% below, past the 35% threshold.
-    await insertReadingsInChunks(
-      site3.inverterIds.map((id) => ({
-        inverter_id: id,
-        site_id: site3.siteId,
-        reading_date: date,
-        daily_kwh: 10,
-        cumulative_mwh: 10.01,
-        entered_by: site3.userId,
-      })),
-    );
-
-    const { data: deviationAlerts, error: devErr } = await admin
-      .from("alerts")
-      .select("id, message")
-      .eq("site_id", site3.siteId)
-      .eq("alert_type", "baseline_deviation")
-      .eq("is_resolved", false);
-    if (devErr) throw devErr;
-
-    expect(deviationAlerts).toHaveLength(1);
-    expect(deviationAlerts[0].message).toMatch(/below the expected baseline/);
-
-    // Correct it: update all 4 to a normal ~25 kWh/day (total 100, matching expected).
-    for (const id of site3.inverterIds) {
-      const { error: updErr } = await admin
-        .from("daily_readings")
-        .update({ daily_kwh: 25, cumulative_mwh: 10.025 })
-        .eq("inverter_id", id)
-        .eq("reading_date", date);
-      if (updErr) throw updErr;
+    // 37 days of history, all 4 inverters: steady at 25 kWh/day for the
+    // first 30 days (the trailing-30-day baseline window), then dropped to
+    // 15 kWh/day (40% down) for the most recent 7 days -- past the site-wide
+    // check's -20% threshold (same threshold as the per-inverter check,
+    // applied to the site-wide daily total instead of one inverter).
+    const rows = [];
+    for (let d = 36; d >= 0; d--) {
+      const date = ymd(daysAgo(d));
+      for (const id of site3.inverterIds) {
+        rows.push({
+          inverter_id: id,
+          site_id: site3.siteId,
+          reading_date: date,
+          daily_kwh: d <= 6 ? 15 : 25,
+          cumulative_mwh: 10 + (36 - d) * 0.025,
+          entered_by: site3.userId,
+        });
+      }
     }
+    await insertReadingsInChunks(rows);
+
+    const { data: siteAlerts, error: siteErr } = await admin
+      .from("alerts")
+      .select("id, inverter_id, message")
+      .eq("site_id", site3.siteId)
+      .eq("alert_type", "site_underperformance")
+      .eq("is_resolved", false);
+    if (siteErr) throw siteErr;
+
+    expect(siteAlerts).toHaveLength(1);
+    expect(siteAlerts[0].inverter_id).toBeNull();
+    expect(siteAlerts[0].message).toMatch(/Total site generation/);
+    expect(siteAlerts[0].message).toMatch(/below its own 30-day average/);
+
+    // Correct the most recent 7 days back to the normal 25 kWh/day.
+    const cutoff = ymd(daysAgo(6));
+    const { error: updErr } = await admin
+      .from("daily_readings")
+      .update({ daily_kwh: 25 })
+      .eq("site_id", site3.siteId)
+      .gte("reading_date", cutoff);
+    if (updErr) throw updErr;
+    const { error: rpcErr } = await admin.rpc("refresh_alerts", { p_site_id: site3.siteId });
+    if (rpcErr) throw rpcErr;
 
     const { data: resolvedCheck, error: resErr } = await admin
       .from("alerts")
       .select("id")
       .eq("site_id", site3.siteId)
-      .eq("alert_type", "baseline_deviation")
+      .eq("alert_type", "site_underperformance")
       .eq("is_resolved", false);
     if (resErr) throw resErr;
 
@@ -341,14 +318,7 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
     await cleanupSite(site3.userId);
   });
 
-  it("get_public_dashboard returns raw alert rows, and filterActiveAlerts drops a stale baseline_deviation alert", async () => {
-    // get_public_dashboard used to pre-compute a Good/Watch/Needs Attention
-    // string in SQL; it now returns raw unresolved alerts (see migration
-    // 0012) and the app computes health status in TS with the same
-    // filterActiveAlerts/computeHealthStatus the private dashboard uses.
-    // This test exercises the real RPC's output shape end to end, not just
-    // the pure TS functions in isolation (covered separately in
-    // tests/health.test.ts).
+  it("get_public_dashboard returns raw unresolved alert rows in the shape computeHealthStatus expects", async () => {
     const site6 = await seedSite("public-health");
     const slug = `public-health-${Date.now()}`;
     const { error: publicErr } = await admin
@@ -357,65 +327,33 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
       .eq("id", site6.siteId);
     if (publicErr) throw publicErr;
 
-    // A baseline_deviation alert from 10 days ago -- an old, never-"resolved"
-    // event, not a current condition -- must not keep health status stuck.
-    const staleDate = ymd(daysAgo(10));
+    const { data: emptyData, error: emptyErr } = await admin.rpc("get_public_dashboard", {
+      p_slug: slug,
+    });
+    if (emptyErr) throw emptyErr;
+    expect(emptyData.alerts).toEqual([]);
+    expect(computeHealthStatus(emptyData.alerts)).toBe("good");
+
     const { error: insertErr } = await admin.from("alerts").insert({
       site_id: site6.siteId,
-      alert_type: "baseline_deviation",
+      alert_type: "missing_reading",
       severity: "watch",
-      message: "stale deviation",
-      reading_date: staleDate,
+      message: "No reading logged for Inverter 1 for 3 days.",
+      reading_date: ymd(daysAgo(0)),
       is_resolved: false,
     });
     if (insertErr) throw insertErr;
 
-    const { data: staleData, error: staleErr } = await admin.rpc("get_public_dashboard", {
-      p_slug: slug,
-    });
-    if (staleErr) throw staleErr;
-    expect(staleData.alerts).toHaveLength(1);
-    expect(staleData.alerts[0]).toMatchObject({ alert_type: "baseline_deviation", severity: "watch" });
-    const staleAlerts: ActiveAlertShape[] = staleData.alerts.map(
-      (a: { alert_type: string; reading_date: string }) => ({
-        alertType: a.alert_type,
-        readingDate: a.reading_date,
-        severity: "watch" as const,
-      }),
-    );
-    const staleActive = filterActiveAlerts(staleAlerts, ymd(daysAgo(0)));
-    expect(computeHealthStatus(staleActive)).toBe("good");
-
-    // A baseline_deviation alert from today should still count as current.
-    const { error: recentErr } = await admin.from("alerts").insert({
-      site_id: site6.siteId,
-      alert_type: "baseline_deviation",
-      severity: "watch",
-      message: "recent deviation",
-      reading_date: ymd(daysAgo(0)),
-      is_resolved: false,
-    });
-    if (recentErr) throw recentErr;
-
-    const { data: recentData, error: recentFetchErr } = await admin.rpc("get_public_dashboard", {
-      p_slug: slug,
-    });
-    if (recentFetchErr) throw recentFetchErr;
-    expect(recentData.alerts).toHaveLength(2);
-    const recentAlerts: ActiveAlertShape[] = recentData.alerts.map(
-      (a: { alert_type: string; reading_date: string }) => ({
-        alertType: a.alert_type,
-        readingDate: a.reading_date,
-        severity: "watch" as const,
-      }),
-    );
-    const recentActive = filterActiveAlerts(recentAlerts, ymd(daysAgo(0)));
-    expect(computeHealthStatus(recentActive)).toBe("watch");
+    const { data, error } = await admin.rpc("get_public_dashboard", { p_slug: slug });
+    if (error) throw error;
+    expect(data.alerts).toHaveLength(1);
+    expect(data.alerts[0]).toMatchObject({ alert_type: "missing_reading", severity: "watch" });
+    expect(computeHealthStatus(data.alerts)).toBe("watch");
 
     await cleanupSite(site6.userId);
   });
 
-  it("get_public_dashboard returns full reading history, baseline, and active inverters for the range filter", async () => {
+  it("get_public_dashboard returns full reading history and active inverters for the range filter", async () => {
     const site7 = await seedSite("public-range");
     const slug = `public-range-${Date.now()}`;
     const { error: publicErr } = await admin
@@ -438,7 +376,6 @@ describeIfLive("alert generation (refresh_alerts, check_daily_baseline_deviation
     const { data, error } = await admin.rpc("get_public_dashboard", { p_slug: slug });
     if (error) throw error;
     expect(data.inverters).toHaveLength(4);
-    expect(data.baseline).toHaveLength(12);
     expect(data.readings).toHaveLength(4);
     expect(data.readings[0]).toMatchObject({ daily_kwh: 20, no_reading: false });
 

@@ -43,7 +43,6 @@ const perInverterKwh = DEMO_INVERTERS.map((inv) => ({
   kwh: monthReadings.filter((r) => r.inverterId === inv.id).reduce((sum, r) => sum + r.kwh, 0),
 }));
 const totalDcCapacityKwp = DEMO_INVERTERS.reduce((sum, inv) => sum + inv.dcCapacityKwp, 0);
-const baselineRow = demo.baseline.find((b) => b.month === month);
 
 const report = computeMonthlyReport({
   siteName: DEMO_SITE.name,
@@ -52,7 +51,6 @@ const report = computeMonthlyReport({
   daysInMonth,
   totalKwh,
   previousMonthKwh,
-  expectedDailyKwhMid: baselineRow?.expectedDailyKwhMid ?? null,
   totalDcCapacityKwp,
   tariffRateInrPerKwh: DEMO_SITE.tariffRateInrPerKwh,
   gridEmissionFactorKgPerKwh: DEMO_SITE.gridEmissionFactorKgPerKwh,

@@ -17,8 +17,6 @@ export type ReportPeriod = {
   previousStart: string;
   previousEnd: string;
   minDaysWithData: number;
-  /** Calendar month (1-12) whose expected_baseline_monthly row to compare against. */
-  baselineMonth: number;
 };
 
 const MONTH_NAMES = [
@@ -62,7 +60,6 @@ export function computeReportPeriod(
       previousStart: ymd(prevDay),
       previousEnd: ymd(prevDay),
       minDaysWithData: 1,
-      baselineMonth: day.getUTCMonth() + 1,
     };
   }
 
@@ -79,7 +76,6 @@ export function computeReportPeriod(
       previousStart: ymd(prevStart),
       previousEnd: ymd(prevEnd),
       minDaysWithData: 4,
-      baselineMonth: end.getUTCMonth() + 1,
     };
   }
 
@@ -113,6 +109,5 @@ export function computeReportPeriod(
     previousStart: ymd(prevPeriodStart),
     previousEnd: ymd(prevPeriodEnd),
     minDaysWithData: Math.min(20, daysInMonth),
-    baselineMonth: periodStart.getUTCMonth() + 1,
   };
 }

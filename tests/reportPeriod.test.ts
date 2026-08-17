@@ -36,14 +36,12 @@ describe("computeReportPeriod", () => {
     expect(period.previousStart).toBe("2026-07-31");
     expect(period.previousEnd).toBe("2026-07-31");
     expect(period.minDaysWithData).toBe(1);
-    expect(period.baselineMonth).toBe(8);
   });
 
   it("daily: correctly crosses a month boundary", () => {
     const period = computeReportPeriod("daily", new Date(Date.UTC(2026, 7, 1)));
     expect(period.start).toBe("2026-07-31");
     expect(period.previousStart).toBe("2026-07-30");
-    expect(period.baselineMonth).toBe(7);
   });
 
   it("weekly: covers the trailing 7 days ending yesterday", () => {
@@ -55,7 +53,6 @@ describe("computeReportPeriod", () => {
     expect(period.previousStart).toBe("2023-12-25");
     expect(period.previousEnd).toBe("2023-12-31");
     expect(period.minDaysWithData).toBe(4);
-    expect(period.baselineMonth).toBe(1);
   });
 
   it("monthly: covers the previous calendar month (matches original monthly-report behavior)", () => {
@@ -67,7 +64,6 @@ describe("computeReportPeriod", () => {
     expect(period.previousStart).toBe("2026-06-01");
     expect(period.previousEnd).toBe("2026-06-30");
     expect(period.minDaysWithData).toBe(20);
-    expect(period.baselineMonth).toBe(7);
   });
 
   it("monthly: correctly crosses a year boundary", () => {
@@ -77,6 +73,5 @@ describe("computeReportPeriod", () => {
     expect(period.end).toBe("2025-12-31");
     expect(period.previousStart).toBe("2025-11-01");
     expect(period.previousEnd).toBe("2025-11-30");
-    expect(period.baselineMonth).toBe(12);
   });
 });

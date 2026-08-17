@@ -154,9 +154,7 @@ export function SetupWizard() {
           <Card>
             <CardHeader>
               <CardTitle>Site details</CardTitle>
-              <CardDescription>
-                Used to calculate an expected-generation baseline for your plant.
-              </CardDescription>
+              <CardDescription>Basic info about where this plant is installed.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -332,10 +330,7 @@ export function SetupWizard() {
           <Card>
             <CardHeader>
               <CardTitle>Review</CardTitle>
-              <CardDescription>
-                We&apos;ll fetch a solar-irradiance baseline for your coordinates and set
-                everything up.
-              </CardDescription>
+              <CardDescription>Double-check everything, then create your site.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p>

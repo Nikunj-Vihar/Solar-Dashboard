@@ -8,11 +8,8 @@ import { ChevronLeft, ChevronRight, CalendarDays, Loader2, AlertTriangle, Pencil
 import { toast } from "sonner";
 import {
   dailyLogSchema,
-  SKY_CONDITIONS,
-  SKY_CONDITION_LABELS,
   type DailyLogFormValues,
   type DailyLogInput,
-  type SkyCondition,
 } from "@/lib/validation/schemas";
 import { submitDailyLog, deleteDailyReading } from "../actions";
 import { checkCumulativeAndCrossCheck, type CrossCheckResult } from "@/lib/validation/readings";
@@ -27,13 +24,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -140,14 +130,12 @@ export function LoggingForm({
   inverters,
   loggedDates,
   skippedDates,
-  existingSkyCondition,
 }: {
   date: string;
   today: string;
   inverters: InverterRowData[];
   loggedDates: string[];
   skippedDates: string[];
-  existingSkyCondition: { skyCondition: SkyCondition; note: string | null } | null;
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -173,10 +161,8 @@ export function LoggingForm({
         isReset: inv.existing?.isReset ?? false,
         confirmMismatch: false,
       })),
-      skyCondition: existingSkyCondition?.skyCondition,
-      weatherNote: existingSkyCondition?.note ?? "",
     }),
-    [date, inverters, existingSkyCondition],
+    [date, inverters],
   );
 
   const {
@@ -450,44 +436,6 @@ export function LoggingForm({
         </Card>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-          <Card>
-            <CardContent className="space-y-3 pt-4">
-              <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="sky-condition" className="flex items-center gap-1">
-                  Today&apos;s sky condition
-                  <InfoTooltip>
-                    A quick note on the weather, since you&apos;re at the site anyway -- helps
-                    explain a low-generation day at a glance. Objective numbers (irradiance, cloud
-                    cover, temperature) fill in automatically from NASA POWER a week or two later.
-                  </InfoTooltip>
-                </Label>
-                <Select
-                  value={watch("skyCondition") || ""}
-                  onValueChange={(v) => setValue("skyCondition", v ? (v as SkyCondition) : undefined)}
-                >
-                  <SelectTrigger id="sky-condition" className="w-40">
-                    <SelectValue placeholder="Select...">
-                      {(value: SkyCondition | "" | null) =>
-                        value ? SKY_CONDITION_LABELS[value] : "Select..."
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SKY_CONDITIONS.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {SKY_CONDITION_LABELS[c]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Input
-                placeholder="Optional note (e.g. dust storm, haze from a nearby fire)"
-                {...register("weatherNote")}
-              />
-            </CardContent>
-          </Card>
-
           {inverters.map((inv, i) => {
             const rc = rowChecks[i];
             const isEditing = editingIds.has(inv.id) || !inv.existing;

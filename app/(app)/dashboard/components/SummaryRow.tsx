@@ -83,14 +83,14 @@ function MeterTile({
 
 export function SummaryRow({
   rangeKwh,
-  rangeExpectedMidKwh,
+  rangeLastYearKwh,
   rangeAvgPerDayKwh,
   lifetimeKwh,
   healthStatus,
   healthReason,
 }: {
   rangeKwh: number;
-  rangeExpectedMidKwh: number | null;
+  rangeLastYearKwh: number | null;
   rangeAvgPerDayKwh: number;
   lifetimeKwh: number;
   healthStatus: HealthStatus;
@@ -98,9 +98,9 @@ export function SummaryRow({
 }) {
   const health = HEALTH_CONFIG[healthStatus];
   const HealthIcon = health.icon;
-  const vsBaseline =
-    rangeExpectedMidKwh !== null ? computeVsBaselinePercent(rangeKwh, rangeExpectedMidKwh) : null;
-  const vsBaselineRatio = vsBaseline !== null ? vsBaseline + 100 : null;
+  const vsLastYear =
+    rangeLastYearKwh !== null ? computeVsBaselinePercent(rangeKwh, rangeLastYearKwh) : null;
+  const vsLastYearRatio = vsLastYear !== null ? vsLastYear + 100 : null;
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -119,11 +119,10 @@ export function SummaryRow({
           <p className="flex items-center gap-1 text-sm text-muted-foreground">
             Health status
             <InfoTooltip>
-              Good: nothing flagged. Watch: one or more inverters are underperforming versus
-              their own recent average, a reading hasn&apos;t been logged in a couple of days, or
-              total generation was off from the expected baseline in the last few days. Needs
-              attention: a flagged issue hasn&apos;t cleared up yet. Always reflects current
-              condition, regardless of the date filter above.
+              Good: nothing flagged. Watch: one or more inverters (or the site as a whole) are
+              underperforming versus their own recent average, or a reading hasn&apos;t been
+              logged in a couple of days. Needs attention: a flagged issue hasn&apos;t cleared up
+              yet. Always reflects current condition, regardless of the date filter above.
             </InfoTooltip>
           </p>
           <p className={`mt-1 flex items-center gap-1.5 text-2xl font-semibold ${health.className}`}>
@@ -138,20 +137,18 @@ export function SummaryRow({
         </CardContent>
       </Card>
       <MeterTile
-        label="vs Expected"
-        percent={vsBaselineRatio}
+        label="vs Last Year"
+        percent={vsLastYearRatio}
         info={
           <>
             <p>
-              Actual generation for the selected period as a share of the expected baseline for
-              those days (100% = right on target).
+              Actual generation for the selected period as a share of what this site generated in
+              this same date range one year earlier (100% = right on target) -- entirely from your
+              own logged readings, no outside data source.
             </p>
             <p className="mt-2">
-              The baseline itself: each month&apos;s average daily solar irradiance for your
-              site&apos;s coordinates (a 20-year historical average from NASA&apos;s POWER
-              dataset, fetched once at setup) × your total installed DC capacity × an assumed
-              75% performance ratio -- the typical efficiency loss from panel heat, wiring,
-              inverter conversion, and the like. An estimate, not a guarantee.
+              Shows &quot;—&quot; until a full year of history exists for the range you&apos;ve
+              selected.
             </p>
           </>
         }

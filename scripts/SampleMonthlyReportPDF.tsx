@@ -45,10 +45,7 @@ export function SampleMonthlyReportPDF({ report }: { report: MonthlyReportData }
         <Text style={styles.subtitle}>Monthly generation report — {report.monthLabel}</Text>
 
         <Text style={styles.headline}>{report.totalKwh.toLocaleString()} kWh</Text>
-        <Text style={styles.headlineSub}>
-          {pct(report.vsPreviousMonthPercent)} vs. last month · {pct(report.vsExpectedPercent)} vs.
-          expected
-        </Text>
+        <Text style={styles.headlineSub}>{pct(report.vsPreviousMonthPercent)} vs. last month</Text>
 
         <View style={styles.hr} />
 

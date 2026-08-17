@@ -18,10 +18,7 @@ export function LifetimeTrend({
     if (readings.length === 0) return [];
     const earliest = readings.reduce((min, r) => (r.date < min ? r.date : min), today);
     const dense = densifyDailyTotals(readings, earliest, today);
-    // No baseline here on purpose -- this is meant as a simple, zoomed-out
-    // "every month since the start" total, distinct from the Generation
-    // trend chart above, which compares a recent window against baseline.
-    return buildTrendData(dense, [], "month");
+    return buildTrendData(dense, "month");
   }, [readings, today]);
 
   return (

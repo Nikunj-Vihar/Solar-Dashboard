@@ -44,7 +44,6 @@ type ReportPeriod = {
   previousStart: string;
   previousEnd: string;
   minDaysWithData: number;
-  baselineMonth: number;
 };
 
 const MONTH_NAMES = [
@@ -86,7 +85,6 @@ function computeReportPeriod(
       previousStart: ymd(prevDay),
       previousEnd: ymd(prevDay),
       minDaysWithData: 1,
-      baselineMonth: day.getUTCMonth() + 1,
     };
   }
 
@@ -103,7 +101,6 @@ function computeReportPeriod(
       previousStart: ymd(prevStart),
       previousEnd: ymd(prevEnd),
       minDaysWithData: 4,
-      baselineMonth: end.getUTCMonth() + 1,
     };
   }
 
@@ -136,7 +133,6 @@ function computeReportPeriod(
     previousStart: ymd(prevPeriodStart),
     previousEnd: ymd(prevPeriodEnd),
     minDaysWithData: Math.min(20, daysInMonth),
-    baselineMonth: periodStart.getUTCMonth() + 1,
   };
 }
 
@@ -230,19 +226,6 @@ Deno.serve(async (req: Request) => {
         ? prevReadings.reduce((sum, r) => sum + Number(r.daily_kwh), 0)
         : null;
 
-    const { data: baselineRow } = await supabase
-      .from("expected_baseline_monthly")
-      .select("expected_daily_kwh_mid")
-      .eq("site_id", site.id)
-      .eq("month", period.baselineMonth)
-      .maybeSingle();
-    // Approximation for periods spanning a month boundary (mainly weekly):
-    // uses the baseline for the month containing the period's end date,
-    // consistent with this dashboard's "estimate, not certified" framing.
-    const expectedKwh = baselineRow
-      ? Number(baselineRow.expected_daily_kwh_mid) * period.days
-      : null;
-
     const { data: alerts } = await supabase
       .from("alerts")
       .select("message")
@@ -278,7 +261,6 @@ Deno.serve(async (req: Request) => {
       totalKwh: round2(totalKwh),
       vsPreviousPeriodPercent:
         previousPeriodKwh !== null ? computeVsPercent(totalKwh, previousPeriodKwh) : null,
-      vsExpectedPercent: expectedKwh !== null ? computeVsPercent(totalKwh, expectedKwh) : null,
       cufPercent: round2(computeCUF(totalKwh, totalDcCapacityKwp, period.days)),
       specificYieldKwhPerKwp: round2(computeSpecificYield(totalKwh, totalDcCapacityKwp)),
       rupeeSaved: computeRupeeSaved(totalKwh, site.tariff_rate_inr_per_kwh),

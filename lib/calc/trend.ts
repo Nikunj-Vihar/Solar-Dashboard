@@ -2,18 +2,10 @@ import { addDays } from "@/lib/date";
 
 /**
  * Buckets a dense daily-readings series (one entry per day, 0 where nothing
- * was logged) into day/week/month points for the trend chart, summing the
- * matching baseline band alongside so actual and expected stay aligned.
+ * was logged) into day/week/month points for the trend chart.
  */
 
 export type DailyReadingTotal = { date: string; totalKwh: number | null };
-
-export type MonthlyBaselineRow = {
-  month: number; // 1-12
-  expectedDailyKwhLow: number;
-  expectedDailyKwhMid: number;
-  expectedDailyKwhHigh: number;
-};
 
 export type TrendGranularity = "day" | "week" | "month";
 
@@ -21,14 +13,7 @@ export type TrendPoint = {
   label: string;
   date: string;
   actualKwh: number | null;
-  expectedLowKwh: number;
-  expectedMidKwh: number;
-  expectedHighKwh: number;
 };
-
-function monthOf(dateStr: string): number {
-  return Number(dateStr.slice(5, 7));
-}
 
 function bucketKey(dateStr: string, granularity: TrendGranularity): string {
   if (granularity === "day") return dateStr;
@@ -58,26 +43,17 @@ function labelFor(key: string, granularity: TrendGranularity): string {
 
 export function buildTrendData(
   readings: DailyReadingTotal[],
-  baseline: MonthlyBaselineRow[],
   granularity: TrendGranularity,
 ): TrendPoint[] {
-  const baselineByMonth = new Map(baseline.map((b) => [b.month, b]));
-  const buckets = new Map<
-    string,
-    { actual: number; low: number; mid: number; high: number; hasData: boolean }
-  >();
+  const buckets = new Map<string, { actual: number; hasData: boolean }>();
 
   for (const { date, totalKwh } of readings) {
     const key = bucketKey(date, granularity);
-    const b = baselineByMonth.get(monthOf(date));
-    const bucket = buckets.get(key) ?? { actual: 0, low: 0, mid: 0, high: 0, hasData: false };
+    const bucket = buckets.get(key) ?? { actual: 0, hasData: false };
     if (totalKwh !== null) {
       bucket.actual += totalKwh;
       bucket.hasData = true;
     }
-    bucket.low += b?.expectedDailyKwhLow ?? 0;
-    bucket.mid += b?.expectedDailyKwhMid ?? 0;
-    bucket.high += b?.expectedDailyKwhHigh ?? 0;
     buckets.set(key, bucket);
   }
 
@@ -90,9 +66,6 @@ export function buildTrendData(
       // reading", or truly untouched) reports null rather than 0, so the
       // chart shows a break instead of implying confirmed zero generation.
       actualKwh: v.hasData ? round2(v.actual) : null,
-      expectedLowKwh: round2(v.low),
-      expectedMidKwh: round2(v.mid),
-      expectedHighKwh: round2(v.high),
     }));
 }
 

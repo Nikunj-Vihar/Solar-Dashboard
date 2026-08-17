@@ -26,6 +26,14 @@ export function startOfMonth(dateStr: string): string {
   return `${dateStr.slice(0, 7)}-01`;
 }
 
+/** Shifts by whole calendar years, clamping Feb 29 to Feb 28 in a non-leap target year. */
+export function shiftYears(dateStr: string, years: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const daysInTargetMonth = new Date(Date.UTC(y + years, m, 0)).getUTCDate();
+  const clampedDay = Math.min(d, daysInTargetMonth);
+  return new Date(Date.UTC(y + years, m - 1, clampedDay)).toISOString().slice(0, 10);
+}
+
 /** Inclusive day count between two YYYY-MM-DD strings (toDate - fromDate, in days, plus one). */
 export function daysBetween(fromDate: string, toDate: string): number {
   const [y1, m1, d1] = fromDate.split("-").map(Number);

@@ -69,7 +69,7 @@ export default async function PublicDashboardPage({
 
         <SummaryRow
           rangeKwh={dashboard.rangeKwh}
-          rangeExpectedMidKwh={dashboard.rangeExpectedMidKwh}
+          rangeLastYearKwh={dashboard.rangeLastYearKwh}
           rangeAvgPerDayKwh={rangeAvgPerDayKwh}
           lifetimeKwh={dashboard.lifetimeKwh}
           healthStatus={dashboard.healthStatus}
@@ -78,12 +78,12 @@ export default async function PublicDashboardPage({
 
         <InverterBarChart data={dashboard.perInverterRange} singleDay={dashboard.rangeIsSingleDay} />
 
-        <TrendChart readings={dashboard.allReadings} baseline={dashboard.baseline} range={range} />
+        <TrendChart readings={dashboard.allReadings} range={range} />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ImpactFigures
             rangeKwh={dashboard.rangeKwh}
-            rangeExpectedMidKwh={dashboard.rangeExpectedMidKwh}
+            rangeLastYearKwh={dashboard.rangeLastYearKwh}
             rangeLabel={rangeLabel}
             tariffRateInrPerKwh={dashboard.tariffRateInrPerKwh}
             gridEmissionFactorKgPerKwh={dashboard.gridEmissionFactorKgPerKwh}

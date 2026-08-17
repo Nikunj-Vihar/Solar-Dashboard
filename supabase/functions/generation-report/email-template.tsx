@@ -24,7 +24,6 @@ export type GenerationReportEmailProps = {
   periodLabel: string;
   totalKwh: number;
   vsPreviousPeriodPercent: number | null;
-  vsExpectedPercent: number | null;
   cufPercent: number;
   specificYieldKwhPerKwp: number;
   rupeeSaved: number | null;
@@ -75,8 +74,7 @@ export function GenerationReportEmail(props: GenerationReportEmailProps) {
               {props.totalKwh.toLocaleString()} kWh
             </Text>
             <Text style={{ color: "#52525b", margin: "4px 0 0", fontSize: "14px" }}>
-              {pct(props.vsPreviousPeriodPercent)} {copy.vsPrevious} · {pct(props.vsExpectedPercent)}{" "}
-              vs. expected
+              {pct(props.vsPreviousPeriodPercent)} {copy.vsPrevious}
             </Text>
           </Section>
 

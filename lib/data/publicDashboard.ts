@@ -2,7 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { todayInTimezone } from "@/lib/date";
 import { computeRangeFields, type RawReadingRow } from "@/lib/calc/dashboardCompute";
-import { computeHealthStatus, pickHealthReason, filterActiveAlerts } from "@/lib/calc/health";
+import { computeHealthStatus, pickHealthReason } from "@/lib/calc/health";
 import type { HealthStatus } from "@/lib/calc/health";
 
 type RpcAlert = {
@@ -21,12 +21,6 @@ export type PublicSitePayload = {
   grid_emission_factor_kg_per_kwh: number;
   inverters: { id: string; name: string; dc_capacity_kwp: number }[];
   readings: RawReadingRow[];
-  baseline: {
-    month: number;
-    expected_daily_kwh_low: number;
-    expected_daily_kwh_mid: number;
-    expected_daily_kwh_high: number;
-  }[];
   alerts: RpcAlert[];
 };
 
@@ -38,17 +32,11 @@ export type PublicDashboardData = {
   rangeKwh: number;
   rangeTotalDays: number;
   lifetimeKwh: number;
-  rangeExpectedMidKwh: number | null;
+  rangeLastYearKwh: number | null;
   rangeIsSingleDay: boolean;
   perInverterRange: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
   allReadings: { date: string; kwh: number | null }[];
   earliestDate: string;
-  baseline: {
-    month: number;
-    expectedDailyKwhLow: number;
-    expectedDailyKwhMid: number;
-    expectedDailyKwhHigh: number;
-  }[];
   healthStatus: HealthStatus;
   healthReason: string | null;
 };
@@ -72,21 +60,10 @@ export function computePublicDashboardData(
 ): PublicDashboardData {
   const today = todayInTimezone(payload.timezone);
 
-  const baseline = payload.baseline.map((b) => ({
-    month: b.month,
-    expectedDailyKwhLow: b.expected_daily_kwh_low,
-    expectedDailyKwhMid: b.expected_daily_kwh_mid,
-    expectedDailyKwhHigh: b.expected_daily_kwh_high,
-  }));
+  const rangeFields = computeRangeFields(payload.readings, payload.inverters, range);
 
-  const rangeFields = computeRangeFields(payload.readings, payload.inverters, range, baseline);
-
-  const activeAlerts = filterActiveAlerts(
-    payload.alerts.map((a) => ({ ...a, alertType: a.alert_type, readingDate: a.reading_date })),
-    today,
-  );
-  const healthStatus = computeHealthStatus(activeAlerts);
-  const healthReason = pickHealthReason(activeAlerts, healthStatus);
+  const healthStatus = computeHealthStatus(payload.alerts);
+  const healthReason = pickHealthReason(payload.alerts, healthStatus);
 
   const allReadings = payload.readings.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh }));
   const earliestDate = allReadings.reduce((min, r) => (r.date < min ? r.date : min), today);
@@ -99,12 +76,11 @@ export function computePublicDashboardData(
     rangeKwh: rangeFields.rangeKwh,
     rangeTotalDays: rangeFields.rangeTotalDays,
     lifetimeKwh: rangeFields.lifetimeKwh,
-    rangeExpectedMidKwh: rangeFields.rangeExpectedMidKwh,
+    rangeLastYearKwh: rangeFields.rangeLastYearKwh,
     rangeIsSingleDay: rangeFields.rangeIsSingleDay,
     perInverterRange: rangeFields.perInverterRange,
     allReadings,
     earliestDate,
-    baseline,
     healthStatus,
     healthReason,
   };

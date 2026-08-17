@@ -7,7 +7,7 @@
  * or the Supabase client.
  */
 import { todayInTimezone, addDays } from "@/lib/date";
-import { computeRangeSummary, computeRangeExpectedMidKwh } from "@/lib/calc/range";
+import { computeRangeSummary } from "@/lib/calc/range";
 
 export const DEMO_SITE = {
   name: "Sunnyvale Rooftop Array",
@@ -23,13 +23,6 @@ export const DEMO_INVERTERS = [
   { id: "demo-inv-4", name: "Inverter 4", ratedCapacityKw: 5.5, dcCapacityKwp: 6.6 },
 ];
 
-export const DEMO_BASELINE = Array.from({ length: 12 }, (_, i) => ({
-  month: i + 1,
-  expectedDailyKwhLow: 85,
-  expectedDailyKwhMid: 100,
-  expectedDailyKwhHigh: 115,
-}));
-
 export type DemoDashboardData = {
   today: string;
   todayKwh: number;
@@ -41,10 +34,9 @@ export type DemoDashboardData = {
   rangeKwh: number;
   rangeDaysWithData: number;
   rangeTotalDays: number;
-  rangeExpectedMidKwh: number | null;
+  rangeLastYearKwh: number | null;
   perInverterRange: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
   allReadings: { date: string; kwh: number }[];
-  baseline: typeof DEMO_BASELINE;
   alerts: {
     id: string;
     message: string;
@@ -120,10 +112,11 @@ export function getDemoDashboardData(): DemoDashboardData {
     rangeKwh: rangeSummary.actualKwh,
     rangeDaysWithData: rangeSummary.daysWithData,
     rangeTotalDays: rangeSummary.totalDays,
-    rangeExpectedMidKwh: computeRangeExpectedMidKwh(today, today, DEMO_BASELINE),
+    // The demo's fixed 90-day window has no year-ago data either -- same
+    // honest "—" a brand-new real site would show, nothing to fake here.
+    rangeLastYearKwh: null,
     perInverterRange,
     allReadings,
-    baseline: DEMO_BASELINE,
     alerts: [
       {
         id: "demo-alert-underperformance",

@@ -29,7 +29,7 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const { date, readings, skyCondition, weatherNote } = parsed.data;
+  const { date, readings } = parsed.data;
 
   const supabase = await createClient();
 
@@ -132,26 +132,6 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
 
   if (upsertError) {
     return { ok: false, error: upsertError.message };
-  }
-
-  // Optional and independent of the readings above -- if left blank (e.g.
-  // editing just the numbers later without re-picking a condition), leave
-  // whatever sky condition was already logged for this day untouched rather
-  // than wiping it out.
-  if (skyCondition) {
-    const { error: weatherErr } = await supabase.from("daily_sky_conditions").upsert(
-      {
-        site_id: site.id,
-        reading_date: date,
-        sky_condition: skyCondition,
-        note: weatherNote || null,
-        entered_by: user.id,
-      },
-      { onConflict: "site_id,reading_date" },
-    );
-    if (weatherErr) {
-      return { ok: false, error: weatherErr.message };
-    }
   }
 
   revalidatePath("/dashboard");

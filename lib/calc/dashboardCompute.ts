@@ -1,5 +1,5 @@
-import { computeRangeSummary, computeRangeExpectedMidKwh } from "./range";
-import type { MonthlyBaselineRow } from "./trend";
+import { computeRangeSummary } from "./range";
+import { shiftYears } from "@/lib/date";
 
 export type RawReadingRow = {
   reading_date: string;
@@ -14,7 +14,7 @@ export type RangeFields = {
   rangeKwh: number;
   rangeDaysWithData: number;
   rangeTotalDays: number;
-  rangeExpectedMidKwh: number | null;
+  rangeLastYearKwh: number | null;
   rangeIsSingleDay: boolean;
   perInverterRange: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
   lifetimeKwh: number;
@@ -43,7 +43,6 @@ export function computeRangeFields(
   rows: RawReadingRow[],
   inverters: InverterMeta[],
   range: { from: string; to: string },
-  baseline: MonthlyBaselineRow[],
 ): RangeFields {
   const rangeRows = rows.filter((r) => r.reading_date >= range.from && r.reading_date <= range.to);
   const rangeIsSingleDay = range.from === range.to;
@@ -64,11 +63,21 @@ export function computeRangeFields(
   const allReadings = rows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh }));
   const rangeSummary = computeRangeSummary(allReadings, range.from, range.to);
 
+  // Same exact date range, shifted back one calendar year, summed from the
+  // site's own actual readings -- null (not zero) rather than a fabricated
+  // comparison when there's simply no data that far back yet.
+  const lastYearFrom = shiftYears(range.from, -1);
+  const lastYearTo = shiftYears(range.to, -1);
+  const lastYearKwhValues = realKwh(
+    rows.filter((r) => r.reading_date >= lastYearFrom && r.reading_date <= lastYearTo),
+  );
+  const rangeLastYearKwh = lastYearKwhValues.length > 0 ? sum(lastYearKwhValues) : null;
+
   return {
     rangeKwh: rangeSummary.actualKwh,
     rangeDaysWithData: rangeSummary.daysWithData,
     rangeTotalDays: rangeSummary.totalDays,
-    rangeExpectedMidKwh: computeRangeExpectedMidKwh(range.from, range.to, baseline),
+    rangeLastYearKwh,
     rangeIsSingleDay,
     perInverterRange,
     lifetimeKwh: sum(realKwh(rows)),

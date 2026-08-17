@@ -1,11 +1,11 @@
 /**
  * Pure math for the dashboard's date-range filter — separate from trend.ts's
  * bucketing (day/week/month points for a chart) because this only needs one
- * summed total plus an expected baseline for whatever arbitrary range the
- * user picked, not a series of points.
+ * summed total for whatever arbitrary range the user picked, not a series
+ * of points.
  */
 import { addDays, isValidDateString } from "@/lib/date";
-import { densifyDailyTotals, type MonthlyBaselineRow } from "./trend";
+import { densifyDailyTotals } from "./trend";
 
 export type RangeSummary = {
   actualKwh: number;
@@ -28,23 +28,6 @@ export function computeRangeSummary(
     }
   }
   return { actualKwh: round2(actualKwh), daysWithData, totalDays: dense.length };
-}
-
-/** Sums each day's month-level expected mid value across the range. Null only if no baseline exists at all. */
-export function computeRangeExpectedMidKwh(
-  from: string,
-  to: string,
-  baseline: MonthlyBaselineRow[],
-): number | null {
-  if (baseline.length === 0) return null;
-  const baselineByMonth = new Map(baseline.map((b) => [b.month, b]));
-  let total = 0;
-  let d = from;
-  while (d <= to) {
-    total += baselineByMonth.get(Number(d.slice(5, 7)))?.expectedDailyKwhMid ?? 0;
-    d = addDays(d, 1);
-  }
-  return round2(total);
 }
 
 /** Matches the trend chart's old fixed "day" window, so a first-time visitor sees the same thing as before. */

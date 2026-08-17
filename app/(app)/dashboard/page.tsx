@@ -48,7 +48,7 @@ export default async function DashboardPage({
 
       <SummaryRow
         rangeKwh={data.rangeKwh}
-        rangeExpectedMidKwh={data.rangeExpectedMidKwh}
+        rangeLastYearKwh={data.rangeLastYearKwh}
         rangeAvgPerDayKwh={rangeAvgPerDayKwh}
         lifetimeKwh={data.lifetimeKwh}
         healthStatus={healthStatus}
@@ -57,17 +57,12 @@ export default async function DashboardPage({
 
       <InverterBarChart data={data.perInverterRange} singleDay={data.rangeIsSingleDay} />
 
-      <TrendChart
-        readings={data.allReadings}
-        baseline={data.baseline}
-        range={range}
-        dailyClimate={data.dailyClimate}
-      />
+      <TrendChart readings={data.allReadings} range={range} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <ImpactFigures
           rangeKwh={data.rangeKwh}
-          rangeExpectedMidKwh={data.rangeExpectedMidKwh}
+          rangeLastYearKwh={data.rangeLastYearKwh}
           rangeLabel={rangeLabel}
           tariffRateInrPerKwh={site.tariff_rate_inr_per_kwh}
           gridEmissionFactorKgPerKwh={site.grid_emission_factor_kg_per_kwh}

@@ -13,7 +13,6 @@ export type MonthlyReportInput = {
   daysInMonth: number;
   totalKwh: number;
   previousMonthKwh: number | null;
-  expectedDailyKwhMid: number | null;
   totalDcCapacityKwp: number;
   tariffRateInrPerKwh: number | null;
   gridEmissionFactorKgPerKwh: number;
@@ -27,8 +26,6 @@ export type MonthlyReportData = {
   monthLabel: string;
   totalKwh: number;
   vsPreviousMonthPercent: number | null;
-  vsExpectedPercent: number | null;
-  expectedKwh: number | null;
   cufPercent: number;
   specificYieldKwhPerKwp: number;
   rupeeSaved: number | null;
@@ -44,10 +41,6 @@ const MONTH_NAMES = [
 ];
 
 export function computeMonthlyReport(input: MonthlyReportInput): MonthlyReportData {
-  const expectedKwh = input.expectedDailyKwhMid !== null
-    ? input.expectedDailyKwhMid * input.daysInMonth
-    : null;
-
   return {
     siteName: input.siteName,
     monthLabel: `${MONTH_NAMES[input.month - 1]} ${input.year}`,
@@ -56,9 +49,6 @@ export function computeMonthlyReport(input: MonthlyReportInput): MonthlyReportDa
       input.previousMonthKwh !== null
         ? computeVsBaselinePercent(input.totalKwh, input.previousMonthKwh)
         : null,
-    vsExpectedPercent:
-      expectedKwh !== null ? computeVsBaselinePercent(input.totalKwh, expectedKwh) : null,
-    expectedKwh: expectedKwh !== null ? round2(expectedKwh) : null,
     cufPercent: round2(computeCUF(input.totalKwh, input.totalDcCapacityKwp, input.daysInMonth)),
     specificYieldKwhPerKwp: round2(
       computeSpecificYield(input.totalKwh, input.totalDcCapacityKwp),

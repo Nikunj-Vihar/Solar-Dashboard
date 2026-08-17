@@ -1,14 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { computeRangeFields, type RawReadingRow } from "@/lib/calc/dashboardCompute";
-import type { MonthlyBaselineRow } from "@/lib/calc/trend";
 
 const inverters = [
   { id: "inv-1", name: "Inverter 1" },
   { id: "inv-2", name: "Inverter 2" },
-];
-
-const baseline: MonthlyBaselineRow[] = [
-  { month: 1, expectedDailyKwhLow: 80, expectedDailyKwhMid: 90, expectedDailyKwhHigh: 100 },
 ];
 
 describe("computeRangeFields", () => {
@@ -20,7 +15,7 @@ describe("computeRangeFields", () => {
       // Outside the range below, but still counts toward lifetime.
       { reading_date: "2025-12-01", inverter_id: "inv-1", daily_kwh: 5, no_reading: false },
     ];
-    const result = computeRangeFields(rows, inverters, { from: "2026-01-01", to: "2026-01-02" }, baseline);
+    const result = computeRangeFields(rows, inverters, { from: "2026-01-01", to: "2026-01-02" });
 
     expect(result.perInverterRange).toEqual([
       { inverterId: "inv-1", name: "Inverter 1", kwh: 21, noReading: false },
@@ -37,7 +32,7 @@ describe("computeRangeFields", () => {
       { reading_date: "2026-01-01", inverter_id: "inv-1", daily_kwh: null, no_reading: true },
       { reading_date: "2026-01-01", inverter_id: "inv-2", daily_kwh: 12, no_reading: false },
     ];
-    const result = computeRangeFields(rows, inverters, { from: "2026-01-01", to: "2026-01-01" }, baseline);
+    const result = computeRangeFields(rows, inverters, { from: "2026-01-01", to: "2026-01-01" });
 
     expect(result.rangeIsSingleDay).toBe(true);
     expect(result.perInverterRange).toEqual([
@@ -51,7 +46,7 @@ describe("computeRangeFields", () => {
       { reading_date: "2026-01-01", inverter_id: "inv-1", daily_kwh: null, no_reading: true },
       { reading_date: "2026-01-02", inverter_id: "inv-1", daily_kwh: null, no_reading: true },
     ];
-    const result = computeRangeFields(rows, inverters, { from: "2026-01-01", to: "2026-01-02" }, baseline);
+    const result = computeRangeFields(rows, inverters, { from: "2026-01-01", to: "2026-01-02" });
 
     expect(result.perInverterRange[0]).toEqual({
       inverterId: "inv-1",
@@ -61,21 +56,47 @@ describe("computeRangeFields", () => {
     });
   });
 
-  it("computes the expected mid baseline for the range, independent of actual readings", () => {
-    const result = computeRangeFields([], inverters, { from: "2026-01-01", to: "2026-01-02" }, baseline);
-    expect(result.rangeExpectedMidKwh).toBe(180); // 2 days * 90
-  });
-
   it("returns zeros for an inverter with no rows in an otherwise non-empty range", () => {
     const rows: RawReadingRow[] = [
       { reading_date: "2026-01-01", inverter_id: "inv-1", daily_kwh: 10, no_reading: false },
     ];
-    const result = computeRangeFields(rows, inverters, { from: "2026-01-01", to: "2026-01-01" }, baseline);
+    const result = computeRangeFields(rows, inverters, { from: "2026-01-01", to: "2026-01-01" });
     expect(result.perInverterRange[1]).toEqual({
       inverterId: "inv-2",
       name: "Inverter 2",
       kwh: 0,
       noReading: false,
+    });
+  });
+
+  describe("rangeLastYearKwh", () => {
+    it("is null when there's no data in the year-ago window", () => {
+      const rows: RawReadingRow[] = [
+        { reading_date: "2026-01-01", inverter_id: "inv-1", daily_kwh: 10, no_reading: false },
+      ];
+      const result = computeRangeFields(rows, inverters, { from: "2026-01-01", to: "2026-01-01" });
+      expect(result.rangeLastYearKwh).toBeNull();
+    });
+
+    it("sums real readings from this exact date range one year earlier", () => {
+      const rows: RawReadingRow[] = [
+        { reading_date: "2026-01-01", inverter_id: "inv-1", daily_kwh: 10, no_reading: false },
+        { reading_date: "2025-01-01", inverter_id: "inv-1", daily_kwh: 8, no_reading: false },
+        { reading_date: "2025-01-02", inverter_id: "inv-1", daily_kwh: 9, no_reading: false },
+        // Outside the shifted window -- should not be included.
+        { reading_date: "2025-01-03", inverter_id: "inv-1", daily_kwh: 100, no_reading: false },
+      ];
+      const result = computeRangeFields(rows, inverters, { from: "2026-01-01", to: "2026-01-02" });
+      expect(result.rangeLastYearKwh).toBe(17);
+    });
+
+    it("excludes no_reading rows from the year-ago window instead of counting them as zero", () => {
+      const rows: RawReadingRow[] = [
+        { reading_date: "2026-01-01", inverter_id: "inv-1", daily_kwh: 10, no_reading: false },
+        { reading_date: "2025-01-01", inverter_id: "inv-1", daily_kwh: null, no_reading: true },
+      ];
+      const result = computeRangeFields(rows, inverters, { from: "2026-01-01", to: "2026-01-01" });
+      expect(result.rangeLastYearKwh).toBeNull();
     });
   });
 });

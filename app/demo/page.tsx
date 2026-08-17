@@ -60,18 +60,18 @@ export default function DemoPage() {
       <main className="mx-auto max-w-5xl space-y-4 p-4">
         <SummaryRow
           rangeKwh={data.rangeKwh}
-          rangeExpectedMidKwh={data.rangeExpectedMidKwh}
+          rangeLastYearKwh={data.rangeLastYearKwh}
           rangeAvgPerDayKwh={data.rangeKwh}
           lifetimeKwh={data.lifetimeKwh}
           healthStatus={healthStatus}
           healthReason={healthReason}
         />
         <InverterBarChart data={data.perInverterRange} singleDay />
-        <TrendChart readings={data.allReadings} baseline={data.baseline} range={chartRange} />
+        <TrendChart readings={data.allReadings} range={chartRange} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ImpactFigures
             rangeKwh={data.rangeKwh}
-            rangeExpectedMidKwh={data.rangeExpectedMidKwh}
+            rangeLastYearKwh={data.rangeLastYearKwh}
             rangeLabel={rangeLabel}
             tariffRateInrPerKwh={DEMO_SITE.tariffRateInrPerKwh}
             gridEmissionFactorKgPerKwh={DEMO_SITE.gridEmissionFactorKgPerKwh}
