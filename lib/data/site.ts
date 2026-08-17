@@ -53,6 +53,11 @@ export const getCurrentSite = cache(async (): Promise<SiteWithInverters | null> 
   const { data } = await supabase
     .from("sites")
     .select("*, inverters(*)")
+    // Without this, the nested inverters come back in whatever order
+    // Postgres feels like returning them in (not insertion order) -- sorting
+    // by name keeps "Inverter 1/2/3/4" showing in that order everywhere
+    // this site is used (Log, Dashboard, Settings).
+    .order("name", { referencedTable: "inverters" })
     .eq("owner_id", user.id)
     .maybeSingle();
 
