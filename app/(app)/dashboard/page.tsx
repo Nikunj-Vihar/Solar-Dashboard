@@ -47,9 +47,7 @@ export default async function DashboardPage({
       </div>
 
       <SummaryRow
-        rangeKwh={data.rangeKwh}
         rangeAvgPerDayKwh={rangeAvgPerDayKwh}
-        rangeLabel={rangeLabel}
         lifetimeKwh={data.lifetimeKwh}
         healthStatus={healthStatus}
         healthReason={healthReason}

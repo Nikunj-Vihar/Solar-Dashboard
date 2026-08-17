@@ -48,16 +48,12 @@ function StatTile({
 }
 
 export function SummaryRow({
-  rangeKwh,
   rangeAvgPerDayKwh,
-  rangeLabel,
   lifetimeKwh,
   healthStatus,
   healthReason,
 }: {
-  rangeKwh: number;
   rangeAvgPerDayKwh: number;
-  rangeLabel: string;
   lifetimeKwh: number;
   healthStatus: HealthStatus;
   healthReason: string | null;
@@ -66,12 +62,7 @@ export function SummaryRow({
   const HealthIcon = health.icon;
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <StatTile
-        label="Generated"
-        value={formatKwh(rangeKwh)}
-        info={`Total generation across all active inverters for the selected period (${rangeLabel}).`}
-      />
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       <StatTile
         label="Avg / day"
         value={formatKwh(rangeAvgPerDayKwh)}
@@ -82,7 +73,7 @@ export function SummaryRow({
         value={formatKwh(lifetimeKwh)}
         info="Every reading ever logged for this site, added up -- not affected by the date filter above."
       />
-      <Card>
+      <Card className="col-span-2 sm:col-span-1">
         <CardContent className="pt-6">
           <p className="flex items-center gap-1 text-sm text-muted-foreground">
             Health status
