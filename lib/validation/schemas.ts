@@ -88,7 +88,6 @@ export const readingEntrySchema = z
       z.coerce.number().min(0, "Can't be negative").optional(),
     ),
     isReset: z.boolean().default(false),
-    confirmMismatch: z.boolean().default(false),
   })
   .refine((data) => data.noReading || data.dailyKwh !== undefined, {
     message: "Required",

@@ -47,27 +47,19 @@ type InverterRowData = {
 };
 
 // Runs the same pure cross-check the server uses (lib/validation/readings.ts)
-// against whatever's currently typed, so a mismatched/decreased reading shows
+// against whatever's currently typed, so a decreased-cumulative reading shows
 // up as the user types instead of only after a blocked submit -- returns null
 // while a field is still empty/unparseable rather than warning prematurely.
 function getLiveStatus(
   inv: InverterRowData,
-  dailyKwhStr: string,
   cumulativeMwhStr: string,
   isReset: boolean,
 ): CrossCheckResult | null {
-  const dailyKwh = Number(dailyKwhStr);
   const cumulativeMwh = Number(cumulativeMwhStr);
-  if (
-    dailyKwhStr === "" ||
-    cumulativeMwhStr === "" ||
-    !Number.isFinite(dailyKwh) ||
-    !Number.isFinite(cumulativeMwh)
-  ) {
+  if (cumulativeMwhStr === "" || !Number.isFinite(cumulativeMwh)) {
     return null;
   }
   return checkCumulativeAndCrossCheck({
-    dailyKwh,
     cumulativeMwh,
     previousCumulativeMwh: inv.previousCumulativeMwh,
     isReset,
@@ -158,7 +150,6 @@ export function LoggingForm({
         dailyKwh: inv.existing?.dailyKwh != null ? String(inv.existing.dailyKwh) : "",
         cumulativeMwh: inv.existing?.cumulativeMwh != null ? String(inv.existing.cumulativeMwh) : "",
         isReset: inv.existing?.isReset ?? false,
-        confirmMismatch: false,
       })),
     }),
     [date, inverters],
@@ -216,8 +207,8 @@ export function LoggingForm({
   }
 
   // Recomputed on every render from the live form values (not just on
-  // submit) so a mismatch/reset warning shows up as soon as it's true,
-  // instead of only after a blocked submit round trip.
+  // submit) so a reset warning shows up as soon as it's true, instead of
+  // only after a blocked submit round trip.
   const rowChecks = inverters.map((inv, i) => {
     const editing = editingIds.has(inv.id) || !inv.existing;
     // These two fields go through z.preprocess (see schemas.ts), which widens
@@ -226,18 +217,10 @@ export function LoggingForm({
     const dailyKwhStr = String(watch(`readings.${i}.dailyKwh`) ?? "");
     const cumulativeMwhStr = String(watch(`readings.${i}.cumulativeMwh`) ?? "");
     const isResetVal = watch(`readings.${i}.isReset`) ?? false;
-    const confirmMismatchVal = watch(`readings.${i}.confirmMismatch`) ?? false;
     const noReadingVal = watch(`readings.${i}.noReading`) ?? false;
-    const status =
-      editing && !noReadingVal ? getLiveStatus(inv, dailyKwhStr, cumulativeMwhStr, isResetVal) : null;
-    return { index: i, dailyKwhStr, cumulativeMwhStr, isResetVal, confirmMismatchVal, noReadingVal, status };
+    const status = editing && !noReadingVal ? getLiveStatus(inv, cumulativeMwhStr, isResetVal) : null;
+    return { index: i, dailyKwhStr, cumulativeMwhStr, isResetVal, noReadingVal, status };
   });
-  // "Same MWh as yesterday" (and similar small mismatches) used to force a
-  // per-inverter red error + checkbox on every single save -- now it's one
-  // low-key warning above Save that clears every flagged row in one tick.
-  const mismatchCandidates = rowChecks.filter((rc) => rc.status?.status === "mismatch");
-  const allMismatchesConfirmed =
-    mismatchCandidates.length > 0 && mismatchCandidates.every((rc) => rc.confirmMismatchVal);
 
   // Site-wide totals for this day, computed live from whatever's currently
   // in the form (not just saved rows) -- Total ED is the plant's combined
@@ -274,9 +257,7 @@ export function LoggingForm({
   }
 
   return (
-    <div
-      className={`mx-auto max-w-3xl md:grid md:grid-cols-[280px_1fr] md:items-start md:gap-6 ${mismatchCandidates.length > 0 ? "pb-72 sm:pb-44" : "pb-48 sm:pb-24"}`}
-    >
+    <div className="mx-auto max-w-3xl pb-48 sm:pb-24 md:grid md:grid-cols-[280px_1fr] md:items-start md:gap-6">
       <div className="hidden md:block">
         <LogCalendar
           selectedDate={date}
@@ -515,14 +496,6 @@ export function LoggingForm({
                       </AlertDescription>
                     </Alert>
                   )}
-
-                  {rc.status?.status === "mismatch" && !rc.confirmMismatchVal && (
-                    <p className="flex items-start gap-1.5 text-sm text-(--viz-status-warning)">
-                      <AlertTriangle className="size-3.5 shrink-0 translate-y-0.5" />
-                      Entered {rc.dailyKwhStr} kWh, but the cumulative counter only moved{" "}
-                      {rc.status.computedDeltaKwh} kWh since yesterday.
-                    </p>
-                  )}
                 </CardContent>
               </Card>
             );
@@ -530,28 +503,6 @@ export function LoggingForm({
 
           <div className="fixed inset-x-0 bottom-24 border-t bg-background p-4 sm:bottom-0">
             <div className="mx-auto max-w-lg space-y-3">
-              {mismatchCandidates.length > 0 && (
-                <Alert variant="warning">
-                  <AlertTriangle className="size-4" />
-                  <AlertDescription>
-                    {mismatchCandidates.length === 1
-                      ? `${inverters[mismatchCandidates[0].index].name}'s reading doesn't quite match its cumulative counter.`
-                      : `${mismatchCandidates.length} readings don't quite match their cumulative counters.`}{" "}
-                    Double-check them above.
-                    <label className="mt-2 flex items-center gap-1.5 text-sm font-medium">
-                      <Checkbox
-                        checked={allMismatchesConfirmed}
-                        onCheckedChange={(v) => {
-                          for (const rc of mismatchCandidates) {
-                            setValue(`readings.${rc.index}.confirmMismatch`, v === true);
-                          }
-                        }}
-                      />
-                      Yes, these are correct
-                    </label>
-                  </AlertDescription>
-                </Alert>
-              )}
               <Button type="submit" className="w-full" size="lg" disabled={submitting}>
                 {submitting ? (
                   <>
