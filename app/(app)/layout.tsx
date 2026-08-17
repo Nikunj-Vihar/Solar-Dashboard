@@ -6,18 +6,6 @@ import { getNotificationsForSite } from "@/lib/data/notifications";
 import { DesktopNavIsland, MobileNavIsland } from "./components/nav-links";
 import { NotificationBell } from "./components/NotificationBell";
 import { SignOutButton } from "@/components/sign-out-button";
-import { Toaster } from "@/components/ui/sonner";
-
-// The app shell's sticky header sits at the very top on every one of these
-// pages -- a plain top-left toast (like the missed-days nudge on the Log
-// page) would render right on top of it, blocking the logo/nav underneath.
-// A dedicated Toaster instance, offset below the header, keeps that toast
-// (and anything else that opts into it via `toasterId`) clear of it without
-// touching the root Toaster used everywhere else (login, save/error toasts).
-// Next.js restricts layout.tsx to a fixed set of recognized exports, so this
-// can't be exported and shared -- LoggingForm.tsx's toast call must use the
-// identical literal "app-shell" as its `toasterId`.
-const APP_TOASTER_ID = "app-shell";
 
 export default async function AppLayout({
   children,
@@ -58,7 +46,6 @@ export default async function AppLayout({
           </div>
         </div>
       </header>
-      <Toaster id={APP_TOASTER_ID} position="top-left" offset={{ top: "4.5rem" }} />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-24 sm:pb-6">{children}</main>
       {site && <MobileNavIsland />}
     </div>

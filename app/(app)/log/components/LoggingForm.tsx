@@ -13,7 +13,6 @@ import {
 } from "@/lib/validation/schemas";
 import { submitDailyLog, deleteDailyReading } from "../actions";
 import { checkCumulativeAndCrossCheck, type CrossCheckResult } from "@/lib/validation/readings";
-import { getMissedDatesThisMonth } from "@/lib/calc/missedDates";
 import { addDays } from "@/lib/date";
 import { LogCalendar } from "./LogCalendar";
 import { WeekStrip } from "./WeekStrip";
@@ -256,52 +255,6 @@ export function LoggingForm({
   }, 0);
 
   const isToday = date === today;
-
-  // Deliberately independent of the header bell's "cleared" state: clearing
-  // that notification just acknowledges you've seen the summary, but doesn't
-  // mean the underlying gap in the data is fixed -- since this is the one
-  // page where the client can actually act on it, it keeps nudging every
-  // time they land on today's entry until the missing days are logged.
-  const missedDatesThisMonth = useMemo(() => {
-    if (!isToday) return [];
-    return getMissedDatesThisMonth({ loggedDates: loggedDatesSet, skippedDates: skippedDatesSet, today });
-  }, [isToday, loggedDatesSet, skippedDatesSet, today]);
-
-  // Cleanup lives in this same effect (not a separate mount/unmount-only
-  // one) so the toast's lifecycle is fully owned by one place -- it fires
-  // once per real change to the missed-days list, and disappears on its own
-  // if the user navigates away or the list clears.
-  useEffect(() => {
-    const id = "missed-days-alert";
-    if (missedDatesThisMonth.length === 0) {
-      toast.dismiss(id);
-      return;
-    }
-    const MAX_SHOWN = 6;
-    const format = (d: string) =>
-      new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    const shown = missedDatesThisMonth.slice(0, MAX_SHOWN).map(format).join(", ");
-    const extra =
-      missedDatesThisMonth.length > MAX_SHOWN ? ` +${missedDatesThisMonth.length - MAX_SHOWN} more` : "";
-    toast.warning(
-      missedDatesThisMonth.length === 1
-        ? "You missed a day this month"
-        : `You missed ${missedDatesThisMonth.length} days this month`,
-      {
-        id,
-        description: shown + extra,
-        position: "top-left",
-        duration: Infinity,
-        closeButton: true,
-        // Routes to the app shell's own Toaster (app/(app)/layout.tsx),
-        // offset below the sticky header so it doesn't cover the logo/nav.
-        toasterId: "app-shell",
-      },
-    );
-    return () => {
-      toast.dismiss(id);
-    };
-  }, [missedDatesThisMonth]);
 
   async function handleDelete(inverterId: string) {
     const result = await deleteDailyReading(inverterId, date);
