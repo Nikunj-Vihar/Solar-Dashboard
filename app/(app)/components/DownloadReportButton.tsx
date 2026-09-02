@@ -28,7 +28,7 @@ export function DownloadReportButton({ months }: { months: AvailableReportMonth[
         {months.length === 0 ? (
           <p className="text-muted-foreground">No completed months yet.</p>
         ) : (
-          <ul className="-mx-3 space-y-0.5">
+          <ul className="-mx-3 max-h-72 space-y-0.5 overflow-y-auto">
             {months.map((m) => (
               <li key={m.value}>
                 <a
