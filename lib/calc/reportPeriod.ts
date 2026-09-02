@@ -111,3 +111,13 @@ export function computeReportPeriod(
     minDaysWithData: Math.min(20, daysInMonth),
   };
 }
+
+/** Start/end YYYY-MM-DD and day count for a given calendar month (1-12). */
+export function monthBounds(
+  year: number,
+  month: number,
+): { from: string; to: string; daysInMonth: number } {
+  const mm = String(month).padStart(2, "0");
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return { from: `${year}-${mm}-01`, to: `${year}-${mm}-${String(daysInMonth).padStart(2, "0")}`, daysInMonth };
+}

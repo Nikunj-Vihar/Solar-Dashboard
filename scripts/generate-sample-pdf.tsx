@@ -1,13 +1,18 @@
 /**
  * Generates public/sample-monthly-report.pdf from the same deterministic
- * demo dataset /demo uses, so the two stay numerically consistent. Run via
+ * demo dataset /demo uses, via the exact same calc path the real feature
+ * uses (computeRangeFields -> computeMonthlyReport -> MonthlyReportPDF), so
+ * the sample preview and a real report never drift apart. Run via
  * `npm run generate:sample-pdf`. Standalone — not deployed with the app.
  */
 import path from "node:path";
 import { renderToFile } from "@react-pdf/renderer";
 import { DEMO_SITE, DEMO_INVERTERS, getDemoDashboardData, generateDemoReadings } from "../lib/demo-data";
 import { computeMonthlyReport } from "../lib/calc/monthlyReport";
-import { SampleMonthlyReportPDF } from "./SampleMonthlyReportPDF";
+import { computeRangeFields, type RawReadingRow } from "../lib/calc/dashboardCompute";
+import { densifyDailyTotals } from "../lib/calc/trend";
+import { monthBounds } from "../lib/calc/reportPeriod";
+import { MonthlyReportPDF } from "../components/reports/MonthlyReportPDF";
 
 const demo = getDemoDashboardData();
 const readings = generateDemoReadings(demo.today);
@@ -19,29 +24,25 @@ function previousMonthOf(dateStr: string): { year: number; month: number } {
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 };
 }
 
-function monthRange(year: number, month: number) {
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const start = `${year}-${String(month).padStart(2, "0")}-01`;
-  const end = `${year}-${String(month).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
-  return { daysInMonth, start, end };
-}
-
 const { year, month } = previousMonthOf(demo.today);
-const { daysInMonth, start, end } = monthRange(year, month);
-const { year: prevYear, month: prevMonth } = previousMonthOf(`${start}`);
-const prevRange = monthRange(prevYear, prevMonth);
+const { from, to, daysInMonth } = monthBounds(year, month);
 
-const monthReadings = readings.filter((r) => r.date >= start && r.date <= end);
-const prevMonthReadings = readings.filter((r) => r.date >= prevRange.start && r.date <= prevRange.end);
-
-const totalKwh = monthReadings.reduce((sum, r) => sum + r.kwh, 0);
-const previousMonthKwh = prevMonthReadings.length > 0
-  ? prevMonthReadings.reduce((sum, r) => sum + r.kwh, 0)
-  : null;
-const perInverterKwh = DEMO_INVERTERS.map((inv) => ({
-  name: inv.name,
-  kwh: monthReadings.filter((r) => r.inverterId === inv.id).reduce((sum, r) => sum + r.kwh, 0),
+const rows: RawReadingRow[] = readings.map((r) => ({
+  reading_date: r.date,
+  inverter_id: r.inverterId,
+  daily_kwh: r.kwh,
+  no_reading: false,
 }));
+const inverters = DEMO_INVERTERS.map((inv) => ({ id: inv.id, name: inv.name }));
+const rangeFields = computeRangeFields(rows, inverters, { from, to });
+
+const monthRows = rows.filter((r) => r.reading_date >= from && r.reading_date <= to);
+const dailySeries = densifyDailyTotals(
+  monthRows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh })),
+  from,
+  to,
+).map((d) => ({ date: d.date, kwh: d.totalKwh }));
+
 const totalDcCapacityKwp = DEMO_INVERTERS.reduce((sum, inv) => sum + inv.dcCapacityKwp, 0);
 
 const report = computeMonthlyReport({
@@ -49,18 +50,29 @@ const report = computeMonthlyReport({
   year,
   month,
   daysInMonth,
-  totalKwh,
-  previousMonthKwh,
+  totalKwh: rangeFields.rangeKwh,
+  previousMonthKwh: rangeFields.rangeLastMonthKwh,
+  previousYearKwh: rangeFields.rangeLastYearKwh,
   totalDcCapacityKwp,
   tariffRateInrPerKwh: DEMO_SITE.tariffRateInrPerKwh,
   gridEmissionFactorKgPerKwh: DEMO_SITE.gridEmissionFactorKgPerKwh,
-  perInverterKwh,
+  perInverterKwh: rangeFields.perInverterRange.map((p) => ({ name: p.name, kwh: p.kwh })),
   alertMessages: demo.alerts.map((a) => a.message),
   dashboardUrl: "https://your-solar-dashboard.vercel.app/dashboard",
+  rangeDaysWithData: rangeFields.rangeDaysWithData,
+  rangeTotalDays: rangeFields.rangeTotalDays,
+  dailySeries,
+  lifetimeKwh: rangeFields.lifetimeKwh,
 });
 
 const outPath = path.resolve(__dirname, "../public/sample-monthly-report.pdf");
 
-renderToFile(<SampleMonthlyReportPDF report={report} />, outPath).then(() => {
+renderToFile(
+  <MonthlyReportPDF
+    report={report}
+    watermark="SAMPLE REPORT — illustrative data, not a real client's figures. This is what your monthly report will look like once you're logging data."
+  />,
+  outPath,
+).then(() => {
   console.log(`Generated ${outPath}`);
 });

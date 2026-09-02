@@ -157,6 +157,7 @@ Deno.serve(async (req: Request) => {
   const resend = resendApiKey ? new Resend(resendApiKey) : null;
   const siteUrl = Deno.env.get("SITE_URL") ?? "https://solar-dashboard-flax.vercel.app";
   const fromAddress = Deno.env.get("RESEND_FROM") ?? "Solar Dashboard <onboarding@resend.dev>";
+  const reportsInternalSecret = Deno.env.get("REPORTS_INTERNAL_SECRET");
 
   const now = new Date();
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
@@ -280,18 +281,54 @@ Deno.serve(async (req: Request) => {
       continue;
     }
 
+    // Only the monthly cadence gets a PDF attachment -- that's the format the
+    // client actually asked for; daily/weekly stay lightweight HTML-only. A
+    // PDF hiccup (Next.js app down, secret misconfigured, etc) must never
+    // block the email itself, so this is entirely best-effort.
+    let attachments: { filename: string; content: string }[] | undefined;
+    let pdfAttached = false;
+    if (frequency === "monthly" && reportsInternalSecret) {
+      try {
+        const periodKey = period.start.slice(0, 7);
+        const pdfRes = await fetch(
+          `${siteUrl}/api/internal/monthly-report-pdf?siteId=${site.id}&period=${periodKey}`,
+          { headers: { "x-internal-secret": reportsInternalSecret } },
+        );
+        if (pdfRes.ok) {
+          const slug = site.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+          attachments = [
+            {
+              filename: `${slug}-${periodKey}-report.pdf`,
+              content: arrayBufferToBase64(await pdfRes.arrayBuffer()),
+            },
+          ];
+          pdfAttached = true;
+        }
+      } catch {
+        // best-effort, see comment above
+      }
+    }
+
     const html = await render(React.createElement(GenerationReportEmail, emailProps));
     const { error: sendErr } = await resend.emails.send({
       from: fromAddress,
       to: ownerData.user.email,
       subject: `${site.name}: ${period.label} generation report`,
       html,
+      attachments,
     });
 
     if (sendErr) {
       results.push({ site: site.name, frequency, status: "error", reason: sendErr.message });
     } else {
-      results.push({ site: site.name, frequency, status: "sent", to: ownerData.user.email, totalKwh });
+      results.push({
+        site: site.name,
+        frequency,
+        status: "sent",
+        to: ownerData.user.email,
+        totalKwh,
+        pdfAttached,
+      });
     }
   }
 
@@ -302,4 +339,17 @@ Deno.serve(async (req: Request) => {
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+// Chunked to avoid a "Maximum call stack size exceeded" from spreading a
+// large typed array straight into String.fromCharCode -- these PDFs are
+// small (tens of KB), but this is cheap insurance regardless.
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
 }

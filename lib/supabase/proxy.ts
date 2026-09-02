@@ -1,7 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATH_PREFIXES = ["/s/", "/demo", "/login", "/auth"];
+const PUBLIC_PATH_PREFIXES = [
+  "/s/",
+  "/demo",
+  "/login",
+  "/auth",
+  // Not actually public -- called server-to-server (no browser, no session
+  // cookies) by the generation-report Edge Function, and gated by its own
+  // shared-secret check instead. Needs to be exempted here or every call
+  // would get redirected to /login before the route handler ever runs.
+  "/api/internal/",
+];
 
 function isPublicPath(pathname: string) {
   return (
