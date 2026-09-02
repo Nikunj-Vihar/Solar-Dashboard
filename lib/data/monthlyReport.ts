@@ -4,6 +4,8 @@ import { computeRangeFields } from "@/lib/calc/dashboardCompute";
 import { densifyDailyTotals } from "@/lib/calc/trend";
 import { computeMonthlyReport, type MonthlyReportData } from "@/lib/calc/monthlyReport";
 import { monthBounds } from "@/lib/calc/reportPeriod";
+import { todayInTimezone } from "@/lib/date";
+import { getLoggedDatesForSite } from "./readings";
 import type { SiteWithInverters } from "./site";
 
 /**
@@ -72,4 +74,34 @@ export async function getMonthlyReportData(
     dailySeries,
     lifetimeKwh: rangeFields.lifetimeKwh,
   });
+}
+
+/** value: YYYY-MM, label: "August 2026" */
+export type AvailableReportMonth = { value: string; label: string };
+
+/** Distinct completed (non-current) calendar months with at least one real reading, newest first. */
+export async function getAvailableReportMonths(
+  siteId: string,
+  timezone: string,
+): Promise<AvailableReportMonth[]> {
+  const currentYearMonth = todayInTimezone(timezone).slice(0, 7);
+  const { logged } = await getLoggedDatesForSite(siteId);
+
+  const months = new Set<string>();
+  for (const date of logged) {
+    const yearMonth = date.slice(0, 7);
+    if (yearMonth < currentYearMonth) months.add(yearMonth);
+  }
+
+  return [...months]
+    .sort()
+    .reverse()
+    .map((yearMonth) => {
+      const [year, month] = yearMonth.split("-").map(Number);
+      const label = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      });
+      return { value: yearMonth, label };
+    });
 }

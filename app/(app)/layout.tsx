@@ -3,8 +3,10 @@ import Link from "next/link";
 import { Sun } from "lucide-react";
 import { getAuthedUser, getCurrentSite } from "@/lib/data/site";
 import { getNotificationsForSite } from "@/lib/data/notifications";
+import { getAvailableReportMonths } from "@/lib/data/monthlyReport";
 import { DesktopNavIsland, MobileNavIsland } from "./components/nav-links";
 import { NotificationBell } from "./components/NotificationBell";
+import { DownloadReportButton } from "./components/DownloadReportButton";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export default async function AppLayout({
@@ -18,7 +20,10 @@ export default async function AppLayout({
   }
 
   const site = await getCurrentSite();
-  const notifications = site ? await getNotificationsForSite(site) : [];
+  const [notifications, availableReportMonths] = await Promise.all([
+    site ? getNotificationsForSite(site) : Promise.resolve([]),
+    site ? getAvailableReportMonths(site.id, site.timezone) : Promise.resolve([]),
+  ]);
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -41,6 +46,7 @@ export default async function AppLayout({
           </Link>
           <div className="justify-self-center">{site && <DesktopNavIsland />}</div>
           <div className="flex items-center gap-1 justify-self-end">
+            {site && <DownloadReportButton months={availableReportMonths} />}
             {site && <NotificationBell notifications={notifications} />}
             <SignOutButton />
           </div>
