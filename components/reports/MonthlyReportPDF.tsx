@@ -19,75 +19,78 @@ const COLOR = {
   warningText: "#92400e",
 };
 
-const CONTENT_WIDTH = 515;
-const DAILY_CHART_HEIGHT = 90;
-const COMPARISON_CHART_HEIGHT = 70;
+const CONTENT_WIDTH = 539;
+const DAILY_CHART_HEIGHT = 45;
+const COMPARISON_CHART_HEIGHT = 38;
 
+// Everything below is sized to fit the whole report on one A4 page --
+// keep new sections/values this compact, or the page will overflow to a
+// second page (react-pdf clips nothing; it just flows onto page 2).
 const styles = StyleSheet.create({
-  page: { padding: 40, fontSize: 10, fontFamily: "Helvetica", color: COLOR.ink },
+  page: { padding: 28, fontSize: 8, fontFamily: "Helvetica", color: COLOR.ink },
   watermark: {
     backgroundColor: COLOR.warningBg,
     color: COLOR.warningText,
-    padding: 8,
-    borderRadius: 4,
-    fontSize: 9,
-    marginBottom: 20,
+    padding: 5,
+    borderRadius: 3,
+    fontSize: 7,
+    marginBottom: 8,
   },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
-  siteName: { fontSize: 20, fontWeight: 700 },
-  subtitle: { fontSize: 11, color: COLOR.subtext, marginTop: 2 },
-  generatedOn: { fontSize: 8, color: COLOR.faint },
+  siteName: { fontSize: 15, fontWeight: 700 },
+  subtitle: { fontSize: 8, color: COLOR.subtext, marginTop: 1 },
+  generatedOn: { fontSize: 6.5, color: COLOR.faint },
 
-  heroBlock: { marginTop: 20 },
-  heroValue: { fontSize: 32, fontWeight: 700 },
-  insightLine: { fontSize: 9, color: COLOR.subtext, marginTop: 4 },
+  heroBlock: { marginTop: 8 },
+  heroValue: { fontSize: 22, fontWeight: 700 },
+  insightLine: { fontSize: 7.5, color: COLOR.subtext, marginTop: 2 },
 
-  deltaGroup: { flexDirection: "row", gap: 28, marginTop: 12 },
-  deltaValue: { fontSize: 15, fontWeight: 700 },
-  deltaLabel: { fontSize: 8, color: COLOR.muted, marginTop: 1 },
+  deltaGroup: { flexDirection: "row", gap: 20, marginTop: 6 },
+  deltaValue: { fontSize: 11, fontWeight: 700 },
+  deltaLabel: { fontSize: 6.5, color: COLOR.muted, marginTop: 1 },
 
-  hr: { borderBottomWidth: 1, borderBottomColor: COLOR.border, marginVertical: 14 },
-  sectionTitle: { fontSize: 11, fontWeight: 700, marginBottom: 10 },
+  hr: { borderBottomWidth: 1, borderBottomColor: COLOR.border, marginVertical: 5 },
+  sectionTitle: { fontSize: 9, fontWeight: 700, marginBottom: 4 },
 
   chartWrap: { position: "relative", width: CONTENT_WIDTH },
-  axisLabel: { position: "absolute", fontSize: 7, color: COLOR.faint },
+  axisLabel: { position: "absolute", fontSize: 6, color: COLOR.faint },
 
-  compareRow: { flexDirection: "row", justifyContent: "center", gap: 36, width: CONTENT_WIDTH },
+  compareRow: { flexDirection: "row", justifyContent: "center", gap: 20, width: CONTENT_WIDTH },
   compareColumn: { alignItems: "center", width: 90 },
-  compareValue: { fontSize: 8, fontWeight: 700, marginBottom: 4 },
-  compareBar: { width: 44, borderRadius: 3 },
-  compareLabel: { fontSize: 8, color: COLOR.muted, marginTop: 6, textAlign: "center" },
+  compareValue: { fontSize: 7, fontWeight: 700, marginBottom: 2 },
+  compareBar: { width: 36, borderRadius: 3 },
+  compareLabel: { fontSize: 6.5, color: COLOR.muted, marginTop: 3, textAlign: "center" },
 
   kpiGrid: { flexDirection: "row", flexWrap: "wrap" },
-  kpiBox: { width: "33%", marginBottom: 14 },
-  kpiLabel: { fontSize: 8, color: COLOR.muted, marginBottom: 3 },
-  kpiValue: { fontSize: 15, fontWeight: 700 },
-  kpiSub: { fontSize: 7, color: COLOR.faint, marginTop: 2 },
+  kpiBox: { width: "33%", marginBottom: 6 },
+  kpiLabel: { fontSize: 6.5, color: COLOR.muted, marginBottom: 1 },
+  kpiValue: { fontSize: 11, fontWeight: 700 },
+  kpiSub: { fontSize: 6, color: COLOR.faint, marginTop: 1 },
 
-  inverterRow: { marginBottom: 9 },
-  inverterLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 3 },
-  inverterName: { fontSize: 9, fontWeight: 700 },
-  inverterValue: { fontSize: 9, color: COLOR.muted },
-  meterTrack: { height: 5, borderRadius: 3, backgroundColor: COLOR.accentTrack },
-  meterFill: { height: 5, borderRadius: 3, backgroundColor: COLOR.accent },
+  inverterRow: { marginBottom: 4 },
+  inverterLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 2 },
+  inverterName: { fontSize: 7.5, fontWeight: 700 },
+  inverterValue: { fontSize: 7.5, color: COLOR.muted },
+  meterTrack: { height: 4, borderRadius: 2, backgroundColor: COLOR.accentTrack },
+  meterFill: { height: 4, borderRadius: 2, backgroundColor: COLOR.accent },
   inverterTotalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
     borderTopColor: COLOR.border,
-    marginTop: 4,
-    paddingTop: 8,
+    marginTop: 2,
+    paddingTop: 4,
   },
-  inverterTotalLabel: { fontSize: 9, fontWeight: 700 },
-  inverterTotalValue: { fontSize: 9, fontWeight: 700 },
+  inverterTotalLabel: { fontSize: 7.5, fontWeight: 700 },
+  inverterTotalValue: { fontSize: 7.5, fontWeight: 700 },
 
-  alertLine: { fontSize: 9, color: COLOR.subtext, marginBottom: 4 },
+  alertLine: { fontSize: 7.5, color: COLOR.subtext, marginBottom: 2 },
 
-  footer: { fontSize: 8, color: COLOR.faint, lineHeight: 1.5 },
+  footer: { fontSize: 6.5, color: COLOR.faint, lineHeight: 1.3 },
 });
 
 function pct(n: number | null): string {
