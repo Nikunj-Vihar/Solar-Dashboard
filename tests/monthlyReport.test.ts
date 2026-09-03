@@ -28,6 +28,7 @@ describe("computeMonthlyReport", () => {
       kwh: 100,
     })),
     lifetimeKwh: 50000,
+    cumulativeGenerationMwh: 12,
   };
 
   it("computes a full report with all figures present", () => {
@@ -79,5 +80,15 @@ describe("computeMonthlyReport", () => {
   it("derives a trees-equivalent estimate from the CO2 offset", () => {
     const report = computeMonthlyReport(baseInput);
     expect(report.treesEquivalent).toBe(Math.round(report.co2OffsetKg / (21 / 12)));
+  });
+
+  it("passes through the cumulative-generation cross-check", () => {
+    const report = computeMonthlyReport(baseInput);
+    expect(report.cumulativeGenerationMwh).toBe(12);
+  });
+
+  it("reports cumulative generation as null when it can't be computed", () => {
+    const report = computeMonthlyReport({ ...baseInput, cumulativeGenerationMwh: null });
+    expect(report.cumulativeGenerationMwh).toBeNull();
   });
 });

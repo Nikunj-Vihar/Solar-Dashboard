@@ -74,6 +74,16 @@ const styles = StyleSheet.create({
   inverterValue: { fontSize: 9, color: COLOR.muted },
   meterTrack: { height: 5, borderRadius: 3, backgroundColor: COLOR.accentTrack },
   meterFill: { height: 5, borderRadius: 3, backgroundColor: COLOR.accent },
+  inverterTotalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: COLOR.border,
+    marginTop: 4,
+    paddingTop: 8,
+  },
+  inverterTotalLabel: { fontSize: 9, fontWeight: 700 },
+  inverterTotalValue: { fontSize: 9, fontWeight: 700 },
 
   alertLine: { fontSize: 9, color: COLOR.subtext, marginBottom: 4 },
 
@@ -245,6 +255,30 @@ export function MonthlyReportPDF({ report, watermark }: { report: MonthlyReportD
             </View>
           );
         })}
+        <View style={styles.inverterTotalRow}>
+          <Text style={styles.inverterTotalLabel}>Total (all inverters)</Text>
+          <Text style={styles.inverterTotalValue}>{formatKwh(report.totalKwh)}</Text>
+        </View>
+
+        <View style={styles.hr} />
+
+        <Text style={styles.sectionTitle}>Monthly totals</Text>
+        <View style={styles.kpiGrid}>
+          <KpiTile
+            label="Total generation"
+            value={formatKwh(report.totalKwh)}
+            sub="sum of daily readings, all inverters"
+          />
+          <KpiTile
+            label="Cumulative generation"
+            value={
+              report.cumulativeGenerationMwh !== null
+                ? `${report.cumulativeGenerationMwh.toLocaleString(undefined, { maximumFractionDigits: 2 })} MWh`
+                : "—"
+            }
+            sub="meter reading, end of month minus start"
+          />
+        </View>
 
         {report.alertMessages.length > 0 && (
           <>

@@ -63,6 +63,10 @@ const report = computeMonthlyReport({
   rangeTotalDays: rangeFields.rangeTotalDays,
   dailySeries,
   lifetimeKwh: rangeFields.lifetimeKwh,
+  // The demo dataset only models daily kWh, not a cumulative meter reading,
+  // so this cross-check has nothing to compute from -- shows "--" like a
+  // real site would before it has two logged cumulative readings in a month.
+  cumulativeGenerationMwh: null,
 });
 
 const outPath = path.resolve(__dirname, "../public/sample-monthly-report.pdf");
