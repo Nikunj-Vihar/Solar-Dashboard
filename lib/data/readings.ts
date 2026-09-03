@@ -63,3 +63,14 @@ export async function getSkyConditionForDate(
     .maybeSingle();
   return data ? { skyCondition: data.sky_condition as SkyCondition, note: data.note } : null;
 }
+
+/** Every logged date's sky condition for a site, for correlating against generation. */
+export async function getSkyConditionsForSite(siteId: string): Promise<Map<string, SkyCondition>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("daily_sky_conditions")
+    .select("reading_date, sky_condition")
+    .eq("site_id", siteId);
+
+  return new Map((data ?? []).map((r) => [r.reading_date, r.sky_condition as SkyCondition]));
+}

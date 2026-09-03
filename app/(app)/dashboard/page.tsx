@@ -12,6 +12,7 @@ import { ImpactFigures } from "./components/ImpactFigures";
 import { PerformanceMetrics } from "./components/PerformanceMetrics";
 import { GenerationHeatmap } from "./components/GenerationHeatmap";
 import { LifetimeTrend } from "./components/LifetimeTrend";
+import { SkyConditionImpact } from "./components/SkyConditionImpact";
 import { DateRangeFilter } from "./components/DateRangeFilter";
 
 export default async function DashboardPage({
@@ -78,6 +79,8 @@ export default async function DashboardPage({
       <GenerationHeatmap readings={data.allReadings} range={range} />
 
       <LifetimeTrend readings={data.allReadings} today={data.today} />
+
+      <SkyConditionImpact data={data.skyConditionImpact} />
     </div>
   );
 }

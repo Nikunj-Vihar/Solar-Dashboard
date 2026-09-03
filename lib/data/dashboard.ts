@@ -2,6 +2,9 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { todayInTimezone } from "@/lib/date";
 import { computeRangeFields } from "@/lib/calc/dashboardCompute";
+import { densifyDailyTotals } from "@/lib/calc/trend";
+import { computeSkyConditionImpact, type SkyConditionImpactPoint } from "@/lib/calc/skyConditionImpact";
+import { getSkyConditionsForSite } from "./readings";
 import type { SiteWithInverters } from "./site";
 
 export type DashboardData = {
@@ -19,6 +22,8 @@ export type DashboardData = {
   rangeIsSingleDay: boolean;
   perInverterRange: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
   allReadings: { date: string; kwh: number | null }[];
+  /** Lifetime (not range-scoped, like allReadings) generation grouped by logged sky condition. */
+  skyConditionImpact: SkyConditionImpactPoint[];
   alerts: {
     id: string;
     message: string;
@@ -37,7 +42,7 @@ export async function getDashboardData(
   const currentMonth = today.slice(0, 7);
   const effectiveRange = range ?? { from: today, to: today };
 
-  const [{ data: readings }, { data: alertRows }] = await Promise.all([
+  const [{ data: readings }, { data: alertRows }, skyConditionByDate] = await Promise.all([
     supabase
       .from("daily_readings")
       .select("reading_date, inverter_id, daily_kwh, no_reading")
@@ -49,6 +54,7 @@ export async function getDashboardData(
       .eq("site_id", site.id)
       .eq("is_resolved", false)
       .order("created_at", { ascending: false }),
+    getSkyConditionsForSite(site.id),
   ]);
 
   const rows = readings ?? [];
@@ -61,6 +67,14 @@ export async function getDashboardData(
 
   const activeInverters = site.inverters.filter((inv) => inv.is_active);
   const rangeFields = computeRangeFields(rows, activeInverters, effectiveRange);
+
+  const earliest = rows.reduce((min, r) => (r.reading_date < min ? r.reading_date : min), today);
+  const dailyTotals = densifyDailyTotals(
+    rows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh })),
+    earliest,
+    today,
+  );
+  const skyConditionImpact = computeSkyConditionImpact(dailyTotals, skyConditionByDate);
 
   return {
     today,
@@ -76,6 +90,7 @@ export async function getDashboardData(
     rangeIsSingleDay: rangeFields.rangeIsSingleDay,
     perInverterRange: rangeFields.perInverterRange,
     allReadings: rows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh })),
+    skyConditionImpact,
     alerts: (alertRows ?? []).map((a) => ({
       id: a.id,
       message: a.message,
