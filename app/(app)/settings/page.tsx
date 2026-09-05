@@ -36,29 +36,46 @@ export default async function SettingsPage() {
     }));
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
+    <div className="mx-auto max-w-lg space-y-6 lg:max-w-none">
       <h1 className="text-2xl font-semibold">Settings</h1>
-      <ThemeToggleCard />
-      <SiteNameCard initialName={site.name} />
-      <ChangePasswordCard email={user.email} />
-      <PublicShareCard initialIsPublic={site.is_public} initialSlug={site.public_share_slug} />
-      <InvertersCard initialInverters={activeInverters} />
-      <ReportSettingsCard initialFrequency={site.report_frequency} />
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Export your data</CardTitle>
-          <CardDescription>
-            Download every reading you&apos;ve ever logged as a CSV file. There&apos;s no
-            automatic backup on our end, so keeping your own copy every so often is a good habit.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" size="sm" nativeButton={false} render={<a href="/export" download />}>
-            <Download className="size-4" />
-            Download CSV
-          </Button>
-        </CardContent>
-      </Card>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
+          <h2 className="text-sm font-medium text-muted-foreground">Account</h2>
+          <ThemeToggleCard />
+          <ChangePasswordCard email={user.email} />
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="text-sm font-medium text-muted-foreground">Site</h2>
+          <SiteNameCard initialName={site.name} />
+          <PublicShareCard initialIsPublic={site.is_public} initialSlug={site.public_share_slug} />
+          <InvertersCard initialInverters={activeInverters} />
+          <ReportSettingsCard initialFrequency={site.report_frequency} />
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Export your data</CardTitle>
+              <CardDescription>
+                Download every reading you&apos;ve ever logged as a CSV file. There&apos;s no
+                automatic backup on our end, so keeping your own copy every so often is a good
+                habit.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={<a href="/export" download />}
+              >
+                <Download className="size-4" />
+                Download CSV
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       <DangerZoneCard siteName={site.name} />
     </div>
   );

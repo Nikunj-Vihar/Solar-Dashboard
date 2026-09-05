@@ -275,7 +275,7 @@ export function LoggingForm({
   }
 
   return (
-    <div className="mx-auto max-w-3xl pb-48 sm:pb-24 md:grid md:grid-cols-[280px_1fr] md:items-start md:gap-6">
+    <div className="mx-auto max-w-3xl pb-48 sm:pb-24 md:grid md:grid-cols-[280px_1fr] md:items-start md:gap-6 lg:max-w-5xl lg:gap-8">
       <div className="hidden md:block">
         <LogCalendar
           selectedDate={date}
@@ -362,99 +362,102 @@ export function LoggingForm({
           </Dialog>
         </div>
 
-        <Card className="mb-3">
-          <CardContent className="grid grid-cols-2 gap-3 py-4">
-            <div>
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                Total ED (kWh)
-                <InfoTooltip>Sum of today&apos;s kWh across all active inverters.</InfoTooltip>
-              </p>
-              <p className="mt-0.5 text-lg font-semibold">
-                {totalEd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div>
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                Total ET (MWh)
-                <InfoTooltip>
-                  Sum of every active inverter&apos;s own cumulative (lifetime) meter reading.
-                </InfoTooltip>
-              </p>
-              <p className="mt-0.5 text-lg font-semibold">
-                {totalEt.toLocaleString(undefined, { maximumFractionDigits: 3 })}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-          <Card>
-            <CardContent className="space-y-3 pt-4">
-              <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="sky-condition" className="flex items-center gap-1">
-                  Today&apos;s sky condition
-                  <InfoTooltip>
-                    A quick note on the weather, since you&apos;re at the site anyway -- helps
-                    explain a low-generation day at a glance.
-                  </InfoTooltip>
-                </Label>
-                <Select
-                  value={watch("skyCondition") || ""}
-                  onValueChange={(v) => setValue("skyCondition", v ? (v as SkyCondition) : undefined)}
-                >
-                  <SelectTrigger id="sky-condition" className="w-40">
-                    <SelectValue placeholder="Select...">
-                      {(value: SkyCondition | "" | null) =>
-                        value ? SKY_CONDITION_LABELS[value] : "Select..."
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SKY_CONDITIONS.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {SKY_CONDITION_LABELS[c]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Input
-                placeholder="Optional note (e.g. dust storm, haze from a nearby fire)"
-                {...register("weatherNote")}
-              />
+          <div className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
+            <Card>
+              <CardContent className="grid grid-cols-2 gap-3 py-4">
+                <div>
+                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                    Total ED (kWh)
+                    <InfoTooltip>Sum of today&apos;s kWh across all active inverters.</InfoTooltip>
+                  </p>
+                  <p className="mt-0.5 text-lg font-semibold">
+                    {totalEd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div>
+                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                    Total ET (MWh)
+                    <InfoTooltip>
+                      Sum of every active inverter&apos;s own cumulative (lifetime) meter reading.
+                    </InfoTooltip>
+                  </p>
+                  <p className="mt-0.5 text-lg font-semibold">
+                    {totalEt.toLocaleString(undefined, { maximumFractionDigits: 3 })}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-              <div className="flex items-center justify-between gap-2">
-                <label htmlFor="had-grid-outage" className="flex items-center gap-1 text-sm font-medium">
-                  <Checkbox
-                    id="had-grid-outage"
-                    checked={watch("hadGridOutage") ?? false}
-                    onCheckedChange={(v) => setValue("hadGridOutage", v === true)}
-                  />
-                  Grid power outage today?
-                  <InfoTooltip>
-                    These inverters have no battery, so they shut off entirely during a grid
-                    outage (a safety requirement, not a fault) -- logging it here explains a
-                    low-generation day instead of it looking like an equipment problem.
-                  </InfoTooltip>
-                </label>
-                {watch("hadGridOutage") && (
-                  <Input
-                    type="number"
-                    step="0.25"
-                    min="0"
-                    max="24"
-                    placeholder="Hours"
-                    className="w-24"
-                    {...register("gridOutageHours")}
-                  />
+            <Card>
+              <CardContent className="space-y-3 pt-4">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="sky-condition" className="flex items-center gap-1">
+                    Today&apos;s sky condition
+                    <InfoTooltip>
+                      A quick note on the weather, since you&apos;re at the site anyway -- helps
+                      explain a low-generation day at a glance.
+                    </InfoTooltip>
+                  </Label>
+                  <Select
+                    value={watch("skyCondition") || ""}
+                    onValueChange={(v) => setValue("skyCondition", v ? (v as SkyCondition) : undefined)}
+                  >
+                    <SelectTrigger id="sky-condition" className="w-40">
+                      <SelectValue placeholder="Select...">
+                        {(value: SkyCondition | "" | null) =>
+                          value ? SKY_CONDITION_LABELS[value] : "Select..."
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SKY_CONDITIONS.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {SKY_CONDITION_LABELS[c]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Input
+                  placeholder="Optional note (e.g. dust storm, haze from a nearby fire)"
+                  {...register("weatherNote")}
+                />
+
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="had-grid-outage" className="flex items-center gap-1 text-sm font-medium">
+                    <Checkbox
+                      id="had-grid-outage"
+                      checked={watch("hadGridOutage") ?? false}
+                      onCheckedChange={(v) => setValue("hadGridOutage", v === true)}
+                    />
+                    Grid power outage today?
+                    <InfoTooltip>
+                      These inverters have no battery, so they shut off entirely during a grid
+                      outage (a safety requirement, not a fault) -- logging it here explains a
+                      low-generation day instead of it looking like an equipment problem.
+                    </InfoTooltip>
+                  </label>
+                  {watch("hadGridOutage") && (
+                    <Input
+                      type="number"
+                      step="0.25"
+                      min="0"
+                      max="24"
+                      placeholder="Hours"
+                      className="w-24"
+                      {...register("gridOutageHours")}
+                    />
+                  )}
+                </div>
+                {errors.gridOutageHours && (
+                  <p className="text-sm text-destructive">{errors.gridOutageHours.message}</p>
                 )}
-              </div>
-              {errors.gridOutageHours && (
-                <p className="text-sm text-destructive">{errors.gridOutageHours.message}</p>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
+          <div className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
           {inverters.map((inv, i) => {
             const rc = rowChecks[i];
             const isEditing = editingIds.has(inv.id) || !inv.existing;
@@ -585,6 +588,7 @@ export function LoggingForm({
               </Card>
             );
           })}
+          </div>
 
           <div className="fixed inset-x-0 bottom-24 border-t bg-background p-4 sm:bottom-0">
             <div className="mx-auto max-w-lg space-y-3">
