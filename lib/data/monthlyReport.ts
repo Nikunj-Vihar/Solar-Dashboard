@@ -109,7 +109,6 @@ export async function getMonthlyReportData(
     previousYearKwh: rangeFields.rangeLastYearKwh,
     totalDcCapacityKwp,
     tariffRateInrPerKwh: site.tariff_rate_inr_per_kwh,
-    gridEmissionFactorKgPerKwh: site.grid_emission_factor_kg_per_kwh,
     perInverterKwh: rangeFields.perInverterRange.map((p) => ({ name: p.name, kwh: p.kwh })),
     alertMessages: (alertRows ?? []).map((a) => a.message),
     dashboardUrl: `${siteUrl}/dashboard`,

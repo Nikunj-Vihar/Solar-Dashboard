@@ -12,10 +12,9 @@ export function SkyConditionImpact({ data }: { data: SkyConditionImpactPoint[] }
         <CardTitle className="flex items-center gap-1 text-base">
           Generation by sky condition
           <InfoTooltip>
-            Average daily generation on days logged with each sky condition, across this
-            site&apos;s full history (not just the range selected above). Conditions logged on
-            only a few days will have a noisy average — the day count next to each one shows how
-            much to trust it.
+            Average daily generation on days logged with each sky condition, for the date range
+            selected above. Conditions logged on only a few days will have a noisy average — the
+            day count next to each one shows how much to trust it.
           </InfoTooltip>
         </CardTitle>
       </CardHeader>

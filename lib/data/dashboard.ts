@@ -22,7 +22,7 @@ export type DashboardData = {
   rangeIsSingleDay: boolean;
   perInverterRange: { inverterId: string; name: string; kwh: number; noReading: boolean }[];
   allReadings: { date: string; kwh: number | null }[];
-  /** Lifetime (not range-scoped, like allReadings) generation grouped by logged sky condition. */
+  /** Generation grouped by logged sky condition, scoped to the same selected range as the rest of the dashboard. */
   skyConditionImpact: SkyConditionImpactPoint[];
   alerts: {
     id: string;
@@ -68,11 +68,10 @@ export async function getDashboardData(
   const activeInverters = site.inverters.filter((inv) => inv.is_active);
   const rangeFields = computeRangeFields(rows, activeInverters, effectiveRange);
 
-  const earliest = rows.reduce((min, r) => (r.reading_date < min ? r.reading_date : min), today);
   const dailyTotals = densifyDailyTotals(
     rows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh })),
-    earliest,
-    today,
+    effectiveRange.from,
+    effectiveRange.to,
   );
   const skyConditionImpact = computeSkyConditionImpact(dailyTotals, skyConditionByDate);
 

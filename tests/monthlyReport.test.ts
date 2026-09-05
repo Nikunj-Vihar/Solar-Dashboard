@@ -12,7 +12,6 @@ describe("computeMonthlyReport", () => {
     previousYearKwh: null,
     totalDcCapacityKwp: 26.4,
     tariffRateInrPerKwh: 8.5,
-    gridEmissionFactorKgPerKwh: 0.716,
     perInverterKwh: [
       { name: "Inverter 1", kwh: 800 },
       { name: "Inverter 2", kwh: 780 },
@@ -47,7 +46,6 @@ describe("computeMonthlyReport", () => {
     expect(report.totalKwh).toBe(3100);
     expect(report.vsPreviousMonthPercent).toBeCloseTo(((3100 - 2800) / 2800) * 100, 5);
     expect(report.rupeeSaved).toBe(3100 * 8.5);
-    expect(report.co2OffsetKg).toBeCloseTo(3100 * 0.716, 1);
     expect(report.perInverterKwh).toHaveLength(4);
     expect(report.alertMessages).toEqual(["Inverter 4 underperforming"]);
   });
@@ -85,11 +83,6 @@ describe("computeMonthlyReport", () => {
     expect(report.dataCompleteness).toEqual({ logged: 29, total: 31 });
     expect(report.dailySeries).toHaveLength(31);
     expect(report.lifetimeKwh).toBe(50000);
-  });
-
-  it("derives a trees-equivalent estimate from the CO2 offset", () => {
-    const report = computeMonthlyReport(baseInput);
-    expect(report.treesEquivalent).toBe(Math.round(report.co2OffsetKg / (21 / 12)));
   });
 
   it("passes through the cumulative-generation cross-check", () => {

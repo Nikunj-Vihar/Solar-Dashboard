@@ -64,7 +64,6 @@ const report = computeMonthlyReport({
   previousYearKwh: rangeFields.rangeLastYearKwh,
   totalDcCapacityKwp,
   tariffRateInrPerKwh: DEMO_SITE.tariffRateInrPerKwh,
-  gridEmissionFactorKgPerKwh: DEMO_SITE.gridEmissionFactorKgPerKwh,
   perInverterKwh: rangeFields.perInverterRange.map((p) => ({ name: p.name, kwh: p.kwh })),
   alertMessages: demo.alerts.map((a) => a.message),
   dashboardUrl: "https://your-solar-dashboard.vercel.app/dashboard",

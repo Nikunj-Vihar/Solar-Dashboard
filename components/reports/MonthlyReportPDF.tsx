@@ -379,7 +379,7 @@ export function MonthlyReportPDF({ report, watermark }: { report: MonthlyReportD
 
         <View style={styles.hr} />
 
-        <Text style={styles.sectionTitle}>Environmental & financial impact</Text>
+        <Text style={styles.sectionTitle}>Savings & lifetime generation</Text>
         <View style={styles.kpiGrid}>
           {report.rupeeSaved !== null && (
             <KpiTile
@@ -388,8 +388,6 @@ export function MonthlyReportPDF({ report, watermark }: { report: MonthlyReportD
               value={`Rs. ${Math.round(report.rupeeSaved).toLocaleString("en-IN")}`}
             />
           )}
-          <KpiTile label="Estimated CO2 offset" value={`${Math.round(report.co2OffsetKg).toLocaleString()} kg`} />
-          <KpiTile label="Equivalent to" value={`${report.treesEquivalent.toLocaleString()} trees/yr`} />
           <KpiTile label="Lifetime generation" value={formatKwh(report.lifetimeKwh)} />
         </View>
 
@@ -397,9 +395,8 @@ export function MonthlyReportPDF({ report, watermark }: { report: MonthlyReportD
         <Text style={styles.footer}>
           Based on daily readings and cumulative meter values logged manually at the site — there
           is no irradiance/weather sensor, so comparisons are against this site&apos;s own past
-          generation rather than an external theoretical baseline. Savings, CO2, and
-          trees-equivalent figures are estimates, not certified measurements. View the live
-          dashboard at {report.dashboardUrl}.
+          generation rather than an external theoretical baseline. Savings figures are estimates,
+          not certified measurements. View the live dashboard at {report.dashboardUrl}.
         </Text>
       </Page>
     </Document>

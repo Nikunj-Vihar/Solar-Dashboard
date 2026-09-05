@@ -1,10 +1,4 @@
-import {
-  computeCUF,
-  computeSpecificYield,
-  computeRupeeSaved,
-  computeCo2OffsetKg,
-  computeVsBaselinePercent,
-} from "./kpis";
+import { computeCUF, computeSpecificYield, computeRupeeSaved, computeVsBaselinePercent } from "./kpis";
 
 export type MonthlyReportInput = {
   siteName: string;
@@ -16,7 +10,6 @@ export type MonthlyReportInput = {
   previousYearKwh: number | null;
   totalDcCapacityKwp: number;
   tariffRateInrPerKwh: number | null;
-  gridEmissionFactorKgPerKwh: number;
   perInverterKwh: { name: string; kwh: number }[];
   alertMessages: string[];
   dashboardUrl: string;
@@ -48,9 +41,6 @@ export type MonthlyReportData = {
   cufPercent: number;
   specificYieldKwhPerKwp: number;
   rupeeSaved: number | null;
-  co2OffsetKg: number;
-  /** Rule-of-thumb ~21 kg CO2 absorbed per mature tree per year -- an estimate, same caveat as co2OffsetKg. */
-  treesEquivalent: number;
   perInverterKwh: { name: string; kwh: number }[];
   alertMessages: string[];
   dashboardUrl: string;
@@ -63,16 +53,12 @@ export type MonthlyReportData = {
   totalGridOutageHours: number;
 };
 
-/** ~21 kg CO2 absorbed per mature tree per year (commonly-cited estimate) -> per month. */
-const CO2_KG_PER_TREE_PER_MONTH = 21 / 12;
-
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
 
 export function computeMonthlyReport(input: MonthlyReportInput): MonthlyReportData {
-  const co2OffsetKg = computeCo2OffsetKg(input.totalKwh, input.gridEmissionFactorKgPerKwh);
   return {
     siteName: input.siteName,
     monthLabel: `${MONTH_NAMES[input.month - 1]} ${input.year}`,
@@ -92,8 +78,6 @@ export function computeMonthlyReport(input: MonthlyReportInput): MonthlyReportDa
       computeSpecificYield(input.totalKwh, input.totalDcCapacityKwp),
     ),
     rupeeSaved: computeRupeeSaved(input.totalKwh, input.tariffRateInrPerKwh),
-    co2OffsetKg: round2(co2OffsetKg),
-    treesEquivalent: Math.round(co2OffsetKg / CO2_KG_PER_TREE_PER_MONTH),
     perInverterKwh: input.perInverterKwh.map((i) => ({ name: i.name, kwh: round2(i.kwh) })),
     alertMessages: input.alertMessages,
     dashboardUrl: input.dashboardUrl,
