@@ -27,8 +27,6 @@ export type PublicSitePayload = {
 export type PublicDashboardData = {
   siteName: string;
   tariffRateInrPerKwh: number | null;
-  gridEmissionFactorKgPerKwh: number;
-  totalDcCapacityKwp: number;
   rangeKwh: number;
   rangeTotalDays: number;
   lifetimeKwh: number;
@@ -40,6 +38,7 @@ export type PublicDashboardData = {
   earliestDate: string;
   healthStatus: HealthStatus;
   healthReason: string | null;
+  activeAlertsCount: number;
 };
 
 /** One RPC call for the whole public page -- split from the computation below so a caller only needs it once, even though "today" (derived from the site's own timezone) has to be known before a date range can be resolved. */
@@ -72,8 +71,6 @@ export function computePublicDashboardData(
   return {
     siteName: payload.site_name,
     tariffRateInrPerKwh: payload.tariff_rate_inr_per_kwh,
-    gridEmissionFactorKgPerKwh: payload.grid_emission_factor_kg_per_kwh,
-    totalDcCapacityKwp: payload.inverters.reduce((sum, inv) => sum + inv.dc_capacity_kwp, 0),
     rangeKwh: rangeFields.rangeKwh,
     rangeTotalDays: rangeFields.rangeTotalDays,
     lifetimeKwh: rangeFields.lifetimeKwh,
@@ -85,5 +82,6 @@ export function computePublicDashboardData(
     earliestDate,
     healthStatus,
     healthReason,
+    activeAlertsCount: payload.alerts.length,
   };
 }

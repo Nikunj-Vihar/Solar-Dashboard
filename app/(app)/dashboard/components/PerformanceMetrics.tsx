@@ -1,48 +1,39 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { InfoTooltip } from "@/components/InfoTooltip";
-import { computeCUF, computeSpecificYield } from "@/lib/calc/kpis";
-import { formatPercent } from "@/lib/format";
+import { formatKwh, formatShortDate } from "@/lib/format";
 
 export function PerformanceMetrics({
-  rangeKwh,
-  totalDcCapacityKwp,
-  rangeDays,
+  activeAlertsCount,
+  bestDay,
 }: {
-  rangeKwh: number;
-  totalDcCapacityKwp: number;
-  rangeDays: number;
+  activeAlertsCount: number;
+  bestDay: { date: string; kwh: number } | null;
 }) {
-  const cufPercent = computeCUF(rangeKwh, totalDcCapacityKwp, rangeDays);
-  const specificYield = computeSpecificYield(rangeKwh, totalDcCapacityKwp);
-
   return (
     <>
       <Card>
         <CardContent className="pt-6">
           <p className="flex items-center gap-1 text-sm text-muted-foreground">
-            Capacity utilization
+            Active alerts
             <InfoTooltip>
-              Actual generation in the selected period as a share of what your installed DC
-              capacity could theoretically produce running flat-out, 24 hours a day. Real systems
-              typically run 15–25% due to daylight hours, weather, and panel angle — this
-              isn&apos;t a defect, it&apos;s how solar works.
+              Issues currently flagged for this site — an inverter (or the site as a whole)
+              underperforming versus its own recent average, or a reading that hasn&apos;t been
+              logged in a couple of days. Same signal as the Health status card above, as a count.
             </InfoTooltip>
           </p>
-          <p className="mt-1 text-2xl font-semibold">{formatPercent(cufPercent)}</p>
+          <p className="mt-1 text-2xl font-semibold">{activeAlertsCount}</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="pt-6">
           <p className="flex items-center gap-1 text-sm text-muted-foreground">
-            Specific yield
+            Best day this period
             <InfoTooltip>
-              kWh generated in the selected period per kWp of installed DC capacity — a standard
-              way to compare performance across systems of different sizes.
+              The single highest-generating day within the date range selected above.
             </InfoTooltip>
           </p>
-          <p className="mt-1 text-2xl font-semibold">
-            {specificYield.toLocaleString(undefined, { maximumFractionDigits: 1 })} kWh/kWp
-          </p>
+          <p className="mt-1 text-2xl font-semibold">{bestDay ? formatKwh(bestDay.kwh) : "—"}</p>
+          {bestDay && <p className="mt-1 text-xs text-muted-foreground">{formatShortDate(bestDay.date)}</p>}
         </CardContent>
       </Card>
     </>

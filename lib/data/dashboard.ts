@@ -2,7 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { todayInTimezone } from "@/lib/date";
 import { computeRangeFields } from "@/lib/calc/dashboardCompute";
-import { densifyDailyTotals } from "@/lib/calc/trend";
+import { densifyDailyTotals, findBestDay } from "@/lib/calc/trend";
 import { computeSkyConditionImpact, type SkyConditionImpactPoint } from "@/lib/calc/skyConditionImpact";
 import { getSkyConditionsForSite } from "./readings";
 import type { SiteWithInverters } from "./site";
@@ -24,6 +24,8 @@ export type DashboardData = {
   allReadings: { date: string; kwh: number | null }[];
   /** Generation grouped by logged sky condition, scoped to the same selected range as the rest of the dashboard. */
   skyConditionImpact: SkyConditionImpactPoint[];
+  /** The single highest-generating day within the selected range, or null if nothing logged. */
+  bestDay: { date: string; kwh: number } | null;
   alerts: {
     id: string;
     message: string;
@@ -90,6 +92,7 @@ export async function getDashboardData(
     perInverterRange: rangeFields.perInverterRange,
     allReadings: rows.map((r) => ({ date: r.reading_date, kwh: r.daily_kwh })),
     skyConditionImpact,
+    bestDay: findBestDay(dailyTotals),
     alerts: (alertRows ?? []).map((a) => ({
       id: a.id,
       message: a.message,

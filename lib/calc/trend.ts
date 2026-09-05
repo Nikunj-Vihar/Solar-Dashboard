@@ -82,6 +82,16 @@ function round2(n: number): number {
  * null so the chart can show an honest break instead of a fabricated dip
  * to zero.
  */
+/** The single highest-generating day in a dense daily series, or null if every day is null (nothing logged). */
+export function findBestDay(dailyTotals: DailyReadingTotal[]): { date: string; kwh: number } | null {
+  let best: { date: string; kwh: number } | null = null;
+  for (const d of dailyTotals) {
+    if (d.totalKwh === null) continue;
+    if (best === null || d.totalKwh > best.kwh) best = { date: d.date, kwh: d.totalKwh };
+  }
+  return best;
+}
+
 export function densifyDailyTotals(
   readings: { date: string; kwh: number | null }[],
   fromDate: string,

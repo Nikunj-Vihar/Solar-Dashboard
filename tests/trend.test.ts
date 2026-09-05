@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildTrendData, densifyDailyTotals } from "@/lib/calc/trend";
+import { buildTrendData, densifyDailyTotals, findBestDay } from "@/lib/calc/trend";
 
 describe("buildTrendData", () => {
   it("passes through one point per day at day granularity", () => {
@@ -139,5 +139,32 @@ describe("densifyDailyTotals", () => {
 
   it("returns an empty range gracefully when from > to", () => {
     expect(densifyDailyTotals([], "2026-01-05", "2026-01-01")).toEqual([]);
+  });
+});
+
+describe("findBestDay", () => {
+  it("picks the highest-kWh day", () => {
+    const result = findBestDay([
+      { date: "2026-01-01", totalKwh: 50 },
+      { date: "2026-01-02", totalKwh: 92 },
+      { date: "2026-01-03", totalKwh: 71 },
+    ]);
+    expect(result).toEqual({ date: "2026-01-02", kwh: 92 });
+  });
+
+  it("skips gap days (null) when picking the best", () => {
+    const result = findBestDay([
+      { date: "2026-01-01", totalKwh: null },
+      { date: "2026-01-02", totalKwh: 40 },
+    ]);
+    expect(result).toEqual({ date: "2026-01-02", kwh: 40 });
+  });
+
+  it("returns null when every day is a gap", () => {
+    expect(findBestDay([{ date: "2026-01-01", totalKwh: null }])).toBeNull();
+  });
+
+  it("returns null for an empty series", () => {
+    expect(findBestDay([])).toBeNull();
   });
 });

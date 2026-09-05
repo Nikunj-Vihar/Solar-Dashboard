@@ -3,7 +3,10 @@ import { Sun } from "lucide-react";
 import { fetchPublicSitePayload, computePublicDashboardData } from "@/lib/data/publicDashboard";
 import { resolveDateRange } from "@/lib/calc/range";
 import { todayInTimezone } from "@/lib/date";
+import { computeVsBaselinePercent } from "@/lib/calc/kpis";
+import { densifyDailyTotals, findBestDay } from "@/lib/calc/trend";
 import { formatRangeLabel } from "@/lib/format";
+import { DashboardHero } from "@/app/(app)/dashboard/components/DashboardHero";
 import { SummaryRow } from "@/app/(app)/dashboard/components/SummaryRow";
 import { InverterBarChart } from "@/app/(app)/dashboard/components/InverterBarChart";
 import { TrendChart } from "@/app/(app)/dashboard/components/TrendChart";
@@ -47,6 +50,11 @@ export default async function PublicDashboardPage({
     dashboard.rangeTotalDays > 0
       ? Math.round((dashboard.rangeKwh / dashboard.rangeTotalDays) * 100) / 100
       : 0;
+  const vsLastMonthPercent =
+    dashboard.rangeLastMonthKwh !== null
+      ? computeVsBaselinePercent(dashboard.rangeKwh, dashboard.rangeLastMonthKwh)
+      : null;
+  const bestDay = findBestDay(densifyDailyTotals(dashboard.allReadings, range.from, range.to));
 
   return (
     <div className="min-h-svh bg-muted/20">
@@ -67,19 +75,26 @@ export default async function PublicDashboardPage({
           <DateRangeFilter today={today} earliestDate={dashboard.earliestDate} />
         </div>
 
+        <DashboardHero
+          rangeLabel={rangeLabel}
+          rangeKwh={dashboard.rangeKwh}
+          vsLastMonthPercent={vsLastMonthPercent}
+          healthStatus={dashboard.healthStatus}
+          healthReason={dashboard.healthReason}
+        />
+
         <SummaryRow
           rangeKwh={dashboard.rangeKwh}
           rangeLastMonthKwh={dashboard.rangeLastMonthKwh}
           rangeLastYearKwh={dashboard.rangeLastYearKwh}
           rangeAvgPerDayKwh={rangeAvgPerDayKwh}
           lifetimeKwh={dashboard.lifetimeKwh}
-          healthStatus={dashboard.healthStatus}
-          healthReason={dashboard.healthReason}
         />
 
-        <InverterBarChart data={dashboard.perInverterRange} singleDay={dashboard.rangeIsSingleDay} />
-
-        <TrendChart readings={dashboard.allReadings} range={range} />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <InverterBarChart data={dashboard.perInverterRange} singleDay={dashboard.rangeIsSingleDay} />
+          <TrendChart readings={dashboard.allReadings} range={range} />
+        </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ImpactFigures
@@ -87,13 +102,8 @@ export default async function PublicDashboardPage({
             rangeLastMonthKwh={dashboard.rangeLastMonthKwh}
             rangeLabel={rangeLabel}
             tariffRateInrPerKwh={dashboard.tariffRateInrPerKwh}
-            gridEmissionFactorKgPerKwh={dashboard.gridEmissionFactorKgPerKwh}
           />
-          <PerformanceMetrics
-            rangeKwh={dashboard.rangeKwh}
-            totalDcCapacityKwp={dashboard.totalDcCapacityKwp}
-            rangeDays={dashboard.rangeTotalDays}
-          />
+          <PerformanceMetrics activeAlertsCount={dashboard.activeAlertsCount} bestDay={bestDay} />
         </div>
 
         <p className="text-center text-xs text-muted-foreground">

@@ -1,6 +1,6 @@
 import { Document, Page, Text, View, Svg, Rect, StyleSheet } from "@react-pdf/renderer";
 import type { MonthlyReportData } from "@/lib/calc/monthlyReport";
-import { formatKwh, formatPercent } from "@/lib/format";
+import { formatKwh, formatPercent, formatShortDate } from "@/lib/format";
 
 // Same accent used throughout the live app for magnitude series
 // (app/globals.css's --viz-series-1, validated via the dataviz skill's
@@ -241,11 +241,6 @@ function insightLine(report: MonthlyReportData): string | null {
   if (report.vsPreviousMonthPercent === null) return null;
   const direction = report.vsPreviousMonthPercent >= 0 ? "up" : "down";
   return `Generation was ${direction} ${Math.abs(report.vsPreviousMonthPercent).toFixed(1)}% from last month.`;
-}
-
-function formatShortDate(dateStr: string): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export function MonthlyReportPDF({ report, watermark }: { report: MonthlyReportData; watermark?: string }) {

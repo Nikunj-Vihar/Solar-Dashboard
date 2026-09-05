@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { getAuthedUser, getCurrentSite } from "@/lib/data/site";
+import { ThemeToggleCard } from "./components/ThemeToggleCard";
 import { SiteNameCard } from "./components/SiteNameCard";
 import { ChangePasswordCard } from "./components/ChangePasswordCard";
 import { PublicShareCard } from "./components/PublicShareCard";
@@ -37,6 +38,7 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto max-w-lg space-y-4">
       <h1 className="text-2xl font-semibold">Settings</h1>
+      <ThemeToggleCard />
       <SiteNameCard initialName={site.name} />
       <ChangePasswordCard email={user.email} />
       <PublicShareCard initialIsPublic={site.is_public} initialSlug={site.public_share_slug} />

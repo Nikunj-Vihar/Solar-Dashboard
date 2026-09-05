@@ -18,6 +18,12 @@ export function formatPercent(value: number, opts?: { showSign?: boolean }): str
   return `${sign}${value.toFixed(1)}%`;
 }
 
+/** "Aug 14" -- no year, for a single-date label where the year is already obvious from context. */
+export function formatShortDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 /** "Jul 15, 2026" for a single day, "Jul 1 – Jul 15, 2026" for a range (year dropped from the start unless it differs). */
 export function formatRangeLabel(from: string, to: string): string {
   const parse = (d: string) => {
