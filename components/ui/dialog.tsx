@@ -39,6 +39,10 @@ function DialogOverlay({
   )
 }
 
+// How far (in px) a downward drag on the mobile handle has to travel before
+// it counts as "swipe to dismiss" rather than an incidental touch.
+const SHEET_DISMISS_THRESHOLD = 80
+
 function DialogContent({
   className,
   children,
@@ -47,18 +51,61 @@ function DialogContent({
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
 }) {
+  const hiddenCloseRef = React.useRef<HTMLButtonElement>(null)
+  const dragRef = React.useRef<{ startY: number; pointerId: number } | null>(null)
+
+  // Below `sm:` the popup is a bottom sheet, not a centered modal -- the
+  // handle bar is its drag-to-dismiss affordance. This is independent of
+  // `showCloseButton` (a hidden Close is always rendered) so swipe-to-dismiss
+  // keeps working even for a dialog that hides the visible X button.
+  function handleHandlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse") return
+    dragRef.current = { startY: event.clientY, pointerId: event.pointerId }
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  function handleHandlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    if (event.clientY - drag.startY > SHEET_DISMISS_THRESHOLD) {
+      dragRef.current = null
+      hiddenCloseRef.current?.click()
+    }
+  }
+
+  function endDrag(event: React.PointerEvent<HTMLDivElement>) {
+    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null
+  }
+
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed inset-x-0 bottom-0 z-50 grid max-h-[85vh] w-full gap-4 overflow-y-auto rounded-t-2xl bg-popover p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-sm text-popover-foreground ring-1 ring-foreground/10 duration-150 outline-none data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-bottom",
+          "sm:top-1/2 sm:left-1/2 sm:bottom-auto sm:max-h-none sm:w-full sm:max-w-[calc(100%-2rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:pb-4 sm:data-open:zoom-in-95 sm:data-open:slide-in-from-bottom-0 sm:data-closed:zoom-out-95 sm:data-closed:slide-out-to-bottom-0 sm:max-w-sm",
           className
         )}
         {...props}
       >
+        <div
+          className="-mt-2 mb-1 flex touch-none justify-center py-2 sm:hidden"
+          onPointerDown={handleHandlePointerDown}
+          onPointerMove={handleHandlePointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+        >
+          <span aria-hidden className="h-1.5 w-10 rounded-full bg-muted-foreground/30" />
+        </div>
         {children}
+        <DialogPrimitive.Close
+          ref={hiddenCloseRef}
+          data-slot="dialog-dismiss"
+          aria-hidden
+          tabIndex={-1}
+          className="hidden"
+        />
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"

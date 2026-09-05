@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -257,6 +258,40 @@ export function LoggingForm({
 
   const isToday = date === today;
 
+  // Swipe left/right to change day, mirroring the chevron buttons above --
+  // touch/pen only (a mouse drag is left alone so text selection etc. on a
+  // narrow desktop window still works), and only below the `md:` breakpoint
+  // where the calendar sidebar takes over for direct date access. Bails
+  // immediately if the gesture starts on an interactive element so typing in
+  // a reading field or tapping a button is never intercepted.
+  const swipeRef = useRef<{ startX: number; startY: number; pointerId: number } | null>(null);
+  const SWIPE_MIN_DISTANCE = 60;
+
+  function handleFormPointerDown(event: ReactPointerEvent<HTMLFormElement>) {
+    if (event.pointerType === "mouse") return;
+    if (!window.matchMedia("(max-width: 767px)").matches) return;
+    if ((event.target as HTMLElement).closest("input, select, textarea, button, a")) return;
+    swipeRef.current = { startX: event.clientX, startY: event.clientY, pointerId: event.pointerId };
+  }
+
+  function handleFormPointerUp(event: ReactPointerEvent<HTMLFormElement>) {
+    const start = swipeRef.current;
+    swipeRef.current = null;
+    if (!start || start.pointerId !== event.pointerId) return;
+    const dx = event.clientX - start.startX;
+    const dy = event.clientY - start.startY;
+    if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 2) return;
+    if (dx < 0) {
+      if (!isToday) goToDate(addDays(date, 1));
+    } else {
+      goToDate(addDays(date, -1));
+    }
+  }
+
+  function handleFormPointerCancel(event: ReactPointerEvent<HTMLFormElement>) {
+    if (swipeRef.current?.pointerId === event.pointerId) swipeRef.current = null;
+  }
+
   async function handleDelete(inverterId: string) {
     const result = await deleteDailyReading(inverterId, date);
     if (!result.ok) {
@@ -343,7 +378,7 @@ export function LoggingForm({
             >
               <CalendarDays className="size-4" />
             </DialogTrigger>
-            <DialogContent className="max-w-xs">
+            <DialogContent className="sm:max-w-xs">
               <DialogHeader>
                 <DialogTitle>Select a date</DialogTitle>
               </DialogHeader>
@@ -362,7 +397,13 @@ export function LoggingForm({
           </Dialog>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-3"
+          onPointerDown={handleFormPointerDown}
+          onPointerUp={handleFormPointerUp}
+          onPointerCancel={handleFormPointerCancel}
+        >
           <div className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
             <Card>
               <CardContent className="grid grid-cols-2 gap-3 py-4">
