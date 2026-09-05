@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 import { getCurrentSite } from "@/lib/data/site";
-import { getReadingsForDate, getLoggedDatesForSite, getSkyConditionForDate } from "@/lib/data/readings";
+import {
+  getReadingsForDate,
+  getLoggedDatesForSite,
+  getSkyConditionForDate,
+  getGridOutageForDate,
+} from "@/lib/data/readings";
 import { todayInTimezone, addDays, isValidDateString } from "@/lib/date";
 import { LoggingForm } from "./components/LoggingForm";
 
@@ -23,12 +28,14 @@ export default async function LogPage({
   const date = params.date && isValidDateString(params.date) ? params.date : today;
   const previousDate = addDays(date, -1);
 
-  const [todayReadings, previousReadings, loggedDates, existingSkyCondition] = await Promise.all([
-    getReadingsForDate(site.id, date),
-    getReadingsForDate(site.id, previousDate),
-    getLoggedDatesForSite(site.id),
-    getSkyConditionForDate(site.id, date),
-  ]);
+  const [todayReadings, previousReadings, loggedDates, existingSkyCondition, existingGridOutage] =
+    await Promise.all([
+      getReadingsForDate(site.id, date),
+      getReadingsForDate(site.id, previousDate),
+      getLoggedDatesForSite(site.id),
+      getSkyConditionForDate(site.id, date),
+      getGridOutageForDate(site.id, date),
+    ]);
 
   const inverters = site.inverters
     .filter((inv) => inv.is_active)
@@ -59,6 +66,7 @@ export default async function LogPage({
       loggedDates={Array.from(loggedDates.logged)}
       skippedDates={Array.from(loggedDates.skipped)}
       existingSkyCondition={existingSkyCondition}
+      existingGridOutage={existingGridOutage}
     />
   );
 }

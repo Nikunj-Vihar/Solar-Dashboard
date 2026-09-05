@@ -132,6 +132,7 @@ export function LoggingForm({
   loggedDates,
   skippedDates,
   existingSkyCondition,
+  existingGridOutage,
 }: {
   date: string;
   today: string;
@@ -139,6 +140,7 @@ export function LoggingForm({
   loggedDates: string[];
   skippedDates: string[];
   existingSkyCondition: { skyCondition: SkyCondition; note: string | null } | null;
+  existingGridOutage: { outageHours: number; note: string | null } | null;
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -165,8 +167,10 @@ export function LoggingForm({
       })),
       skyCondition: existingSkyCondition?.skyCondition,
       weatherNote: existingSkyCondition?.note ?? "",
+      hadGridOutage: existingGridOutage !== null,
+      gridOutageHours: existingGridOutage ? String(existingGridOutage.outageHours) : "",
     }),
-    [date, inverters, existingSkyCondition],
+    [date, inverters, existingSkyCondition, existingGridOutage],
   );
 
   const {
@@ -418,6 +422,36 @@ export function LoggingForm({
                 placeholder="Optional note (e.g. dust storm, haze from a nearby fire)"
                 {...register("weatherNote")}
               />
+
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="had-grid-outage" className="flex items-center gap-1 text-sm font-medium">
+                  <Checkbox
+                    id="had-grid-outage"
+                    checked={watch("hadGridOutage") ?? false}
+                    onCheckedChange={(v) => setValue("hadGridOutage", v === true)}
+                  />
+                  Grid power outage today?
+                  <InfoTooltip>
+                    These inverters have no battery, so they shut off entirely during a grid
+                    outage (a safety requirement, not a fault) -- logging it here explains a
+                    low-generation day instead of it looking like an equipment problem.
+                  </InfoTooltip>
+                </label>
+                {watch("hadGridOutage") && (
+                  <Input
+                    type="number"
+                    step="0.25"
+                    min="0"
+                    max="24"
+                    placeholder="Hours"
+                    className="w-24"
+                    {...register("gridOutageHours")}
+                  />
+                )}
+              </div>
+              {errors.gridOutageHours && (
+                <p className="text-sm text-destructive">{errors.gridOutageHours.message}</p>
+              )}
             </CardContent>
           </Card>
 

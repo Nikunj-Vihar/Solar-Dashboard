@@ -125,15 +125,29 @@ export const SKY_CONDITION_LABELS: Record<SkyCondition, string> = {
   foggy: "Foggy",
 };
 
-export const dailyLogSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
-  readings: z.array(readingEntrySchema).min(1),
-  // Site-level, not per-inverter -- weather is one condition for the whole
-  // plant, not a property of a specific inverter. Optional since logging a
-  // reading shouldn't ever block on the weather field.
-  skyCondition: skyConditionSchema.optional(),
-  weatherNote: z.string().max(200).optional().or(z.literal("")),
-});
+export const dailyLogSchema = z
+  .object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
+    readings: z.array(readingEntrySchema).min(1),
+    // Site-level, not per-inverter -- weather is one condition for the whole
+    // plant, not a property of a specific inverter. Optional since logging a
+    // reading shouldn't ever block on the weather field.
+    skyCondition: skyConditionSchema.optional(),
+    weatherNote: z.string().max(200).optional().or(z.literal("")),
+    // Also site-level. Grid-tied inverters with no battery shut off entirely
+    // during a grid outage (anti-islanding safety) -- this explains an
+    // otherwise-mysterious low-generation day and feeds the underperformance
+    // alert check, so it needs a duration, not just a yes/no.
+    hadGridOutage: z.boolean().optional(),
+    gridOutageHours: z.preprocess(
+      (v) => (v === "" ? undefined : v),
+      z.coerce.number().min(0.25, "Must be at least 0.25").max(24).optional(),
+    ),
+  })
+  .refine((data) => !data.hadGridOutage || data.gridOutageHours !== undefined, {
+    message: "Enter how many hours",
+    path: ["gridOutageHours"],
+  });
 export type DailyLogFormValues = z.input<typeof dailyLogSchema>;
 export type DailyLogInput = z.output<typeof dailyLogSchema>;
 

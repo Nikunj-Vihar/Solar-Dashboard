@@ -64,6 +64,22 @@ export async function getSkyConditionForDate(
   return data ? { skyCondition: data.sky_condition as SkyCondition, note: data.note } : null;
 }
 
+export type ExistingGridOutage = { outageHours: number; note: string | null };
+
+export async function getGridOutageForDate(
+  siteId: string,
+  date: string,
+): Promise<ExistingGridOutage | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("daily_grid_outages")
+    .select("outage_hours, note")
+    .eq("site_id", siteId)
+    .eq("reading_date", date)
+    .maybeSingle();
+  return data ? { outageHours: data.outage_hours, note: data.note } : null;
+}
+
 /** Every logged date's sky condition for a site, for correlating against generation. */
 export async function getSkyConditionsForSite(siteId: string): Promise<Map<string, SkyCondition>> {
   const supabase = await createClient();

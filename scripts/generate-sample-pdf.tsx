@@ -43,6 +43,15 @@ const dailySeries = densifyDailyTotals(
   to,
 ).map((d) => ({ date: d.date, kwh: d.totalKwh }));
 
+const perInverterDailySeries = inverters.map((inv) => ({
+  name: inv.name,
+  series: densifyDailyTotals(
+    monthRows.filter((r) => r.inverter_id === inv.id).map((r) => ({ date: r.reading_date, kwh: r.daily_kwh })),
+    from,
+    to,
+  ).map((d) => ({ date: d.date, kwh: d.totalKwh })),
+}));
+
 const totalDcCapacityKwp = DEMO_INVERTERS.reduce((sum, inv) => sum + inv.dcCapacityKwp, 0);
 
 const report = computeMonthlyReport({
@@ -62,11 +71,15 @@ const report = computeMonthlyReport({
   rangeDaysWithData: rangeFields.rangeDaysWithData,
   rangeTotalDays: rangeFields.rangeTotalDays,
   dailySeries,
+  perInverterDailySeries,
   lifetimeKwh: rangeFields.lifetimeKwh,
   // The demo dataset only models daily kWh, not a cumulative meter reading,
   // so this cross-check has nothing to compute from -- shows "--" like a
   // real site would before it has two logged cumulative readings in a month.
   cumulativeGenerationMwh: null,
+  // The demo dataset doesn't model grid outages either -- the section simply
+  // doesn't render, like a real site with no logged outage that month.
+  gridOutageDays: [],
 });
 
 const outPath = path.resolve(__dirname, "../public/sample-monthly-report.pdf");

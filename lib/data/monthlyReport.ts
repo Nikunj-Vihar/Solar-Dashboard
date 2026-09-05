@@ -26,7 +26,7 @@ export async function getMonthlyReportData(
   const { from, to, daysInMonth } = monthBounds(year, month);
   const activeInverters = site.inverters.filter((inv) => inv.is_active);
 
-  const [{ data: readings }, { data: alertRows }] = await Promise.all([
+  const [{ data: readings }, { data: alertRows }, { data: outageRows }] = await Promise.all([
     supabase
       .from("daily_readings")
       .select("reading_date, inverter_id, daily_kwh, cumulative_mwh, no_reading")
@@ -39,6 +39,13 @@ export async function getMonthlyReportData(
       .eq("is_resolved", false)
       .gte("reading_date", from)
       .lte("reading_date", to),
+    supabase
+      .from("daily_grid_outages")
+      .select("reading_date, outage_hours")
+      .eq("site_id", site.id)
+      .gte("reading_date", from)
+      .lte("reading_date", to)
+      .order("reading_date"),
   ]);
 
   const rows = readings ?? [];
@@ -73,6 +80,22 @@ export async function getMonthlyReportData(
     cumulativeGenerationMwh = (cumulativeGenerationMwh ?? 0) + delta;
   }
 
+  // One densified daily series per inverter, same helper as the site-total
+  // dailySeries above, for the report's stacked per-inverter daily chart.
+  const perInverterDailySeries = activeInverters.map((inv) => ({
+    name: inv.name,
+    series: densifyDailyTotals(
+      monthRows.filter((r) => r.inverter_id === inv.id).map((r) => ({ date: r.reading_date, kwh: r.daily_kwh })),
+      from,
+      to,
+    ).map((d) => ({ date: d.date, kwh: d.totalKwh })),
+  }));
+
+  const gridOutageDays = (outageRows ?? []).map((r) => ({
+    date: r.reading_date as string,
+    hours: r.outage_hours as number,
+  }));
+
   const totalDcCapacityKwp = activeInverters.reduce((sum, inv) => sum + inv.dc_capacity_kwp, 0);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://solar-dashboard-flax.vercel.app";
 
@@ -93,8 +116,10 @@ export async function getMonthlyReportData(
     rangeDaysWithData: rangeFields.rangeDaysWithData,
     rangeTotalDays: rangeFields.rangeTotalDays,
     dailySeries,
+    perInverterDailySeries,
     lifetimeKwh: rangeFields.lifetimeKwh,
     cumulativeGenerationMwh,
+    gridOutageDays,
   });
 }
 

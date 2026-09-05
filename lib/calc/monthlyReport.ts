@@ -25,11 +25,16 @@ export type MonthlyReportInput = {
   rangeTotalDays: number;
   /** One point per day of the month, summed across inverters -- null means no reading that day (not a fabricated 0), for the trend chart. */
   dailySeries: { date: string; kwh: number | null }[];
+  /** Same shape as dailySeries, one series per inverter -- for the report's stacked daily chart. */
+  perInverterDailySeries: { name: string; series: { date: string; kwh: number | null }[] }[];
   lifetimeKwh: number;
   /** Sum, across inverters, of (cumulative meter reading on the last day logged this month
    * minus the first day logged this month) -- a cross-check against totalKwh using the meter
    * readings alone, independent of the daily-kWh log. Null when it can't be computed. */
   cumulativeGenerationMwh: number | null;
+  /** Client-logged grid power outages this month -- grid-tied inverters with no battery shut
+   * off entirely during an outage, so this explains an otherwise-mysterious low-generation day. */
+  gridOutageDays: { date: string; hours: number }[];
 };
 
 export type MonthlyReportData = {
@@ -51,8 +56,11 @@ export type MonthlyReportData = {
   dashboardUrl: string;
   dataCompleteness: { logged: number; total: number };
   dailySeries: { date: string; kwh: number | null }[];
+  perInverterDailySeries: { name: string; series: { date: string; kwh: number | null }[] }[];
   lifetimeKwh: number;
   cumulativeGenerationMwh: number | null;
+  gridOutageDays: { date: string; hours: number }[];
+  totalGridOutageHours: number;
 };
 
 /** ~21 kg CO2 absorbed per mature tree per year (commonly-cited estimate) -> per month. */
@@ -94,9 +102,15 @@ export function computeMonthlyReport(input: MonthlyReportInput): MonthlyReportDa
       date: d.date,
       kwh: d.kwh === null ? null : round2(d.kwh),
     })),
+    perInverterDailySeries: input.perInverterDailySeries.map((inv) => ({
+      name: inv.name,
+      series: inv.series.map((d) => ({ date: d.date, kwh: d.kwh === null ? null : round2(d.kwh) })),
+    })),
     lifetimeKwh: round2(input.lifetimeKwh),
     cumulativeGenerationMwh:
       input.cumulativeGenerationMwh !== null ? round2(input.cumulativeGenerationMwh) : null,
+    gridOutageDays: input.gridOutageDays.map((d) => ({ date: d.date, hours: round2(d.hours) })),
+    totalGridOutageHours: round2(input.gridOutageDays.reduce((sum, d) => sum + d.hours, 0)),
   };
 }
 

@@ -29,7 +29,7 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const { date, readings, skyCondition, weatherNote } = parsed.data;
+  const { date, readings, skyCondition, weatherNote, hadGridOutage, gridOutageHours } = parsed.data;
 
   const supabase = await createClient();
 
@@ -143,6 +143,25 @@ export async function submitDailyLog(input: DailyLogInput): Promise<SubmitDailyL
     );
     if (weatherErr) {
       return { ok: false, error: weatherErr.message };
+    }
+  }
+
+  // Same "leave untouched if not re-entered" semantics as the sky condition
+  // above. A row only exists here when an outage actually happened -- an
+  // outage entered by mistake can't be un-checked back to "no row" through
+  // this flow, matching the existing sky-condition limitation.
+  if (hadGridOutage && gridOutageHours) {
+    const { error: outageErr } = await supabase.from("daily_grid_outages").upsert(
+      {
+        site_id: site.id,
+        reading_date: date,
+        outage_hours: gridOutageHours,
+        entered_by: user.id,
+      },
+      { onConflict: "site_id,reading_date" },
+    );
+    if (outageErr) {
+      return { ok: false, error: outageErr.message };
     }
   }
 

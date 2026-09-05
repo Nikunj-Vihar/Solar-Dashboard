@@ -27,8 +27,18 @@ describe("computeMonthlyReport", () => {
       date: `2026-07-${String(i + 1).padStart(2, "0")}`,
       kwh: 100,
     })),
+    perInverterDailySeries: [
+      {
+        name: "Inverter 1",
+        series: Array.from({ length: 31 }, (_, i) => ({
+          date: `2026-07-${String(i + 1).padStart(2, "0")}`,
+          kwh: 25,
+        })),
+      },
+    ],
     lifetimeKwh: 50000,
     cumulativeGenerationMwh: 12,
+    gridOutageDays: [{ date: "2026-07-15", hours: 2.5 }],
   };
 
   it("computes a full report with all figures present", () => {
@@ -90,5 +100,31 @@ describe("computeMonthlyReport", () => {
   it("reports cumulative generation as null when it can't be computed", () => {
     const report = computeMonthlyReport({ ...baseInput, cumulativeGenerationMwh: null });
     expect(report.cumulativeGenerationMwh).toBeNull();
+  });
+
+  it("passes through per-inverter daily series", () => {
+    const report = computeMonthlyReport(baseInput);
+    expect(report.perInverterDailySeries).toHaveLength(1);
+    expect(report.perInverterDailySeries[0].series).toHaveLength(31);
+  });
+
+  it("passes through logged grid outages and sums their hours", () => {
+    const report = computeMonthlyReport({
+      ...baseInput,
+      gridOutageDays: [
+        { date: "2026-07-15", hours: 2.5 },
+        { date: "2026-07-20", hours: 1 },
+      ],
+    });
+    expect(report.gridOutageDays).toEqual([
+      { date: "2026-07-15", hours: 2.5 },
+      { date: "2026-07-20", hours: 1 },
+    ]);
+    expect(report.totalGridOutageHours).toBe(3.5);
+  });
+
+  it("reports zero total outage hours when none were logged", () => {
+    const report = computeMonthlyReport({ ...baseInput, gridOutageDays: [] });
+    expect(report.totalGridOutageHours).toBe(0);
   });
 });

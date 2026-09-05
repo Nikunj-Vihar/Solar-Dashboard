@@ -23,6 +23,14 @@ const CONTENT_WIDTH = 539;
 const DAILY_CHART_HEIGHT = 45;
 const COMPARISON_CHART_HEIGHT = 38;
 
+// Slots 1-4 (blue/orange/aqua/yellow) of the dataviz skill's validated 8-hue
+// categorical palette (references/palette.md) -- that order passes the
+// adjacent-pair CVD gate for stacked bars at all 8 slots, so 4 is safe with
+// no new validation needed. Slot 1 matches the app's existing --viz-series-1
+// accent, kept as the first (bottom) segment. Only used up to 4 inverters;
+// a 5th would need a new slot decision, out of scope for this client.
+const INVERTER_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"];
+
 // Everything below is sized to fit the whole report on one A4 page --
 // keep new sections/values this compact, or the page will overflow to a
 // second page (react-pdf clips nothing; it just flows onto page 2).
@@ -58,6 +66,11 @@ const styles = StyleSheet.create({
 
   chartWrap: { position: "relative", width: CONTENT_WIDTH },
   axisLabel: { position: "absolute", fontSize: 6, color: COLOR.faint },
+
+  legendRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 3 },
+  legendSwatch: { width: 6, height: 6, borderRadius: 1 },
+  legendText: { fontSize: 6.5, color: COLOR.subtext },
 
   compareRow: { flexDirection: "row", justifyContent: "center", gap: 20, width: CONTENT_WIDTH },
   compareColumn: { alignItems: "center", width: 90 },
@@ -98,39 +111,88 @@ function pct(n: number | null): string {
   return formatPercent(n, { showSign: true });
 }
 
-type Bar = { x: number; y: number; width: number; height: number };
+type StackedBar = { x: number; width: number; segments: { y: number; height: number; color: string }[] };
 
-/** One bar per day of the month; a day with no reading gets no bar at all (an honest gap, not a fabricated zero). */
-function buildDailyBars(series: MonthlyReportData["dailySeries"], width: number, height: number): Bar[] {
-  const max = Math.max(1, ...series.map((d) => d.kwh ?? 0));
+/**
+ * One stacked bar per day of the month, one segment per inverter (fixed
+ * order, bottom-to-top) -- a day with no reading gets no bar at all (an
+ * honest gap, not a fabricated zero). Segment heights are proportional to
+ * each inverter's share of that day's total, with a small surface-color gap
+ * between segments (dataviz skill's stacked-mark spec) so touching
+ * inverters read as distinct without drawing a border.
+ */
+function buildStackedDailyBars(
+  dailySeries: MonthlyReportData["dailySeries"],
+  perInverterDailySeries: MonthlyReportData["perInverterDailySeries"],
+  width: number,
+  height: number,
+): StackedBar[] {
+  const max = Math.max(1, ...dailySeries.map((d) => d.kwh ?? 0));
   const gap = 2;
-  const barWidth = Math.max(1, (width - gap * (series.length - 1)) / series.length);
-  return series.map((d, i) => {
-    const barHeight = d.kwh === null ? 0 : Math.max(0.5, (d.kwh / max) * height);
-    return { x: i * (barWidth + gap), y: height - barHeight, width: barWidth, height: barHeight };
+  const segmentGap = 1;
+  const barWidth = Math.max(1, (width - gap * (dailySeries.length - 1)) / dailySeries.length);
+
+  return dailySeries.map((d, dayIndex) => {
+    const x = dayIndex * (barWidth + gap);
+    if (d.kwh === null || d.kwh <= 0) return { x, width: barWidth, segments: [] };
+
+    const totalBarHeight = Math.max(0.5, (d.kwh / max) * height);
+    let bottomY = height;
+    const segments: StackedBar["segments"] = [];
+    perInverterDailySeries.forEach((inv, invIndex) => {
+      const invKwh = inv.series[dayIndex]?.kwh ?? 0;
+      if (invKwh <= 0) return;
+      const segHeight = Math.max(0, (invKwh / d.kwh!) * totalBarHeight - segmentGap);
+      const topY = bottomY - segHeight;
+      segments.push({ y: topY, height: segHeight, color: INVERTER_COLORS[invIndex % INVERTER_COLORS.length] });
+      bottomY = topY - segmentGap;
+    });
+    return { x, width: barWidth, segments };
   });
 }
 
-function DailyGenerationChart({ series }: { series: MonthlyReportData["dailySeries"] }) {
-  const bars = buildDailyBars(series, CONTENT_WIDTH, DAILY_CHART_HEIGHT);
+function DailyGenerationChart({ report }: { report: MonthlyReportData }) {
+  const bars = buildStackedDailyBars(
+    report.dailySeries,
+    report.perInverterDailySeries,
+    CONTENT_WIDTH,
+    DAILY_CHART_HEIGHT,
+  );
   const barWidth = bars[0]?.width ?? 0;
   const labelIndices = new Set<number>();
-  series.forEach((d, i) => {
+  report.dailySeries.forEach((d, i) => {
     const day = Number(d.date.slice(8, 10));
-    if (day === 1 || day % 5 === 0 || i === series.length - 1) labelIndices.add(i);
+    if (day === 1 || day % 5 === 0 || i === report.dailySeries.length - 1) labelIndices.add(i);
   });
 
   return (
     <View style={styles.chartWrap}>
       <Svg width={CONTENT_WIDTH} height={DAILY_CHART_HEIGHT}>
-        {bars.map((b, i) => (
-          <Rect key={i} x={b.x} y={b.y} width={barWidth} height={b.height} rx={1} fill={COLOR.accent} />
-        ))}
+        {bars.map((b, i) =>
+          b.segments.map((seg, si) => (
+            <Rect key={`${i}-${si}`} x={b.x} y={seg.y} width={barWidth} height={seg.height} rx={1} fill={seg.color} />
+          )),
+        )}
       </Svg>
       {[...labelIndices].map((i) => (
         <Text key={i} style={[styles.axisLabel, { left: bars[i].x - 4, top: DAILY_CHART_HEIGHT + 4 }]}>
-          {Number(series[i].date.slice(8, 10))}
+          {Number(report.dailySeries[i].date.slice(8, 10))}
         </Text>
+      ))}
+    </View>
+  );
+}
+
+function InverterLegend({ perInverterKwh }: { perInverterKwh: MonthlyReportData["perInverterKwh"] }) {
+  return (
+    <View style={styles.legendRow}>
+      {perInverterKwh.map((inv, i) => (
+        <View key={inv.name} style={styles.legendItem}>
+          <View style={[styles.legendSwatch, { backgroundColor: INVERTER_COLORS[i % INVERTER_COLORS.length] }]} />
+          <Text style={styles.legendText}>
+            {inv.name} · {formatKwh(inv.kwh)}
+          </Text>
+        </View>
       ))}
     </View>
   );
@@ -181,6 +243,11 @@ function insightLine(report: MonthlyReportData): string | null {
   return `Generation was ${direction} ${Math.abs(report.vsPreviousMonthPercent).toFixed(1)}% from last month.`;
 }
 
+function formatShortDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export function MonthlyReportPDF({ report, watermark }: { report: MonthlyReportData; watermark?: string }) {
   const insight = insightLine(report);
 
@@ -217,7 +284,8 @@ export function MonthlyReportPDF({ report, watermark }: { report: MonthlyReportD
         <View style={styles.hr} />
 
         <Text style={styles.sectionTitle}>Daily generation</Text>
-        <DailyGenerationChart series={report.dailySeries} />
+        <DailyGenerationChart report={report} />
+        <InverterLegend perInverterKwh={report.perInverterKwh} />
 
         <View style={styles.hr} />
 
@@ -292,6 +360,20 @@ export function MonthlyReportPDF({ report, watermark }: { report: MonthlyReportD
                 • {msg}
               </Text>
             ))}
+          </>
+        )}
+
+        {report.gridOutageDays.length > 0 && (
+          <>
+            <View style={styles.hr} />
+            <Text style={styles.sectionTitle}>Grid power outages</Text>
+            <Text style={styles.alertLine}>
+              These inverters have no battery, so they shut off entirely for the duration of a
+              grid outage (a safety requirement, not a fault) -- {report.totalGridOutageHours}{" "}
+              {report.totalGridOutageHours === 1 ? "hour" : "hours"} across {report.gridOutageDays.length}{" "}
+              {report.gridOutageDays.length === 1 ? "day" : "days"} this month:{" "}
+              {report.gridOutageDays.map((d) => `${formatShortDate(d.date)} (${d.hours}h)`).join(", ")}.
+            </Text>
           </>
         )}
 
