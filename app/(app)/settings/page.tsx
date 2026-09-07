@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { getAuthedUser, getCurrentSite } from "@/lib/data/site";
 import { ThemeToggleCard } from "./components/ThemeToggleCard";
+import { InstallAppCard } from "./components/InstallAppCard";
 import { SiteNameCard } from "./components/SiteNameCard";
 import { ChangePasswordCard } from "./components/ChangePasswordCard";
 import { PublicShareCard } from "./components/PublicShareCard";
@@ -43,6 +44,7 @@ export default async function SettingsPage() {
         <div className="space-y-4">
           <h2 className="text-sm font-medium text-muted-foreground">Account</h2>
           <ThemeToggleCard />
+          <InstallAppCard />
           <ChangePasswordCard email={user.email} />
         </div>
 
